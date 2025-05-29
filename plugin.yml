@@ -1,0 +1,24 @@
+name: Skyblock
+version: 1.0.0
+api: 5.0.0
+main: taqdees\Skyblock\Main
+author: Taqdees
+description: Skyblock plugin for PocketMine-MP 5.0.0
+
+permissions:
+  skyblock.player:
+    description: player permissions
+    default: true
+  skyblock.admin:
+    description: admin permissions
+    default: op
+
+commands:
+  is:
+    description: Skyblock island commands
+    permission: skyblock.player
+    usage: "/is <create|home|sethome|invite|kick|leave|members|reset|delete>"
+  skyblock:
+    description: Skyblock admin commands
+    permission: skyblock.admin
+    usage: "/skyblock admin"

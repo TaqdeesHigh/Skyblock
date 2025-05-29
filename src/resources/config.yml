@@ -1,0 +1,33 @@
+# Skyblock Plugin Configuration
+version: 1.0.0
+
+# General Settings
+settings:
+  # Maximum island members (including owner)
+  max_members: 4
+  
+  # Island protection radius
+  protection_radius: 50
+  
+  # Island spacing (distance between islands)
+  island_spacing: 100
+  
+  # Default island grid size before moving to next layer
+  grid_size: 10
+
+# Messages
+messages:
+  prefix: "§b[Skyblock]§r "
+  no_permission: "§cYou don't have permission to use this command!"
+  player_only: "§cThis command can only be used by players!"
+  
+# Database settings (for future expansion)
+database:
+  type: "yaml" # yaml, sqlite, mysql
+  # For future MySQL support
+  mysql:
+    host: "localhost"
+    port: 3306
+    database: "skyblock"
+    username: "root"
+    password: ""
