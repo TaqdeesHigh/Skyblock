@@ -1,6 +1,6 @@
-# SkyBlockPM5
+# SkyBlock
 
-**SkyBlockPM5** is a SkyBlock plugin built for **PocketMine-MP 5.x**.  
+**SkyBlock** is a SkyBlock plugin built for **PocketMine-MP 5.x**.  
 Currently in **very early development**, this plugin aims to bring a fully-featured and customizable SkyBlock experience to PocketMine servers.
 
 > ⚠️ This project is **not functional yet**. Many features are incomplete or not implemented. Use at your own risk. Updates will be made as development progresses.
