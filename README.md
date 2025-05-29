@@ -14,7 +14,9 @@ If you'd like to help, feel free to fork the repo, create a branch, and open a p
 
 ## License
 
-This project will be released under a suitable open-source license once a stable version is available. For now, it is closed for external distribution unless otherwise stated.
+This project is open-source but **not free for commercial use**. See the [LICENSE](./LICENSE) file for full details.
+
+To use this plugin on a public or monetized Minecraft server, please contact me at taqdees678@gmail.com for licensing options.
 
 ---
 
