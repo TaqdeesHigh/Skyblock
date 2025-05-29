@@ -6,7 +6,6 @@ namespace taqdees\Skyblock\managers;
 
 use pocketmine\utils\Config;
 use pocketmine\world\Position;
-use pocketmine\item\Item;
 use taqdees\Skyblock\Main;
 
 class DataManager {
@@ -27,11 +26,7 @@ class DataManager {
         ]);
         
         $this->settingsConfig = new Config($this->plugin->getDataFolder() . "settings.yml", Config::YAML, [
-            "skyblock_world" => null,
-            "chest_template" => [
-                "location" => null,
-                "items" => []
-            ]
+            "skyblock_world" => null
         ]);
     }
 
@@ -100,37 +95,6 @@ class DataManager {
             return null;
         }
         return $world;
-    }
-
-    public function setChestTemplate(Position $position, array $items): void {
-        $template = [
-            "location" => [
-                "x" => $position->getX(),
-                "y" => $position->getY(),
-                "z" => $position->getZ()
-            ],
-            "items" => $items
-        ];
-        $this->settingsConfig->set("chest_template", $template);
-        $this->settingsConfig->save();
-    }
-
-    public function getChestTemplate(): array {
-        $template = $this->settingsConfig->get("chest_template", [
-            "location" => null,
-            "items" => []
-        ]);
-        if (!is_array($template)) {
-            return [
-                "location" => null,
-                "items" => []
-            ];
-        }
-        
-        return [
-            "location" => $template["location"] ?? null,
-            "items" => $template["items"] ?? []
-        ];
     }
 
     private function getNextIslandId(): int {

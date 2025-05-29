@@ -8,12 +8,6 @@ use pocketmine\player\Player;
 use pocketmine\world\Position;
 use pocketmine\world\World;
 use pocketmine\Server;
-use pocketmine\block\VanillaBlocks;
-use pocketmine\item\Item;
-use pocketmine\item\ItemFactory;
-use pocketmine\nbt\tag\CompoundTag;
-use pocketmine\nbt\tag\ListTag;
-use pocketmine\block\tile\Chest;
 use taqdees\Skyblock\Main;
 
 class IslandManager {
@@ -43,9 +37,10 @@ class IslandManager {
             $player->sendMessage("§cSkyblock world not found!");
             return false;
         }
+
         $islandPosition = $this->calculateIslandPosition($world);
         $islandData = $this->dataManager->createIsland($player->getName(), $islandPosition);
-        $this->placeIslandChest($islandPosition);
+        
         $homePosition = new Position(
             $islandData["home"]["x"],
             $islandData["home"]["y"],
@@ -55,6 +50,7 @@ class IslandManager {
         $player->teleport($homePosition);
         
         $player->sendMessage("§aIsland created successfully! Welcome to your new island!");
+        $player->sendMessage("§7You can now start building and customize your island!");
         return true;
     }
 
@@ -69,32 +65,6 @@ class IslandManager {
         $y = 64;
         
         return new Position($x, $y, $z, $world);
-    }
-
-    private function placeIslandChest(Position $islandPosition): void {
-        $chestTemplate = $this->dataManager->getChestTemplate();
-        if ($chestTemplate["location"] === null) {
-            return;
-        }
-
-        $chestLocation = $chestTemplate["location"];
-        $chestPos = new Position(
-            $islandPosition->getX() + $chestLocation["x"],
-            $islandPosition->getY() + $chestLocation["y"],
-            $islandPosition->getZ() + $chestLocation["z"],
-            $islandPosition->getWorld()
-        );
-        $islandPosition->getWorld()->setBlock($chestPos, VanillaBlocks::CHEST());
-        $tile = $islandPosition->getWorld()->getTile($chestPos);
-        if ($tile instanceof Chest) {
-            $inventory = $tile->getInventory();
-            foreach ($chestTemplate["items"] as $itemData) {
-                $item = $this->deserializeItem($itemData);
-                if ($item !== null) {
-                    $inventory->addItem($item);
-                }
-            }
-        }
     }
 
     public function teleportToIsland(Player $player): bool {
@@ -214,8 +184,13 @@ class IslandManager {
             $islandData["members"] = array_values($islandData["members"]);
             $this->dataManager->updateIsland($islandData["owner"], $islandData);
         }
-
-        $player->sendMessage("§aYou have left the island!");
+        $defaultWorld = Server::getInstance()->getWorldManager()->getDefaultWorld();
+        if ($defaultWorld !== null) {
+            $player->teleport($defaultWorld->getSpawnLocation());
+            $player->sendMessage("§aYou have left the island and been teleported to spawn!");
+        } else {
+            $player->sendMessage("§aYou have left the island!");
+        }
         return true;
     }
 
@@ -242,7 +217,13 @@ class IslandManager {
         }
 
         $this->dataManager->deleteIsland($player->getName());
-        $player->sendMessage("§aYour island has been deleted!");
+        $defaultWorld = Server::getInstance()->getWorldManager()->getDefaultWorld();
+        if ($defaultWorld !== null) {
+            $player->teleport($defaultWorld->getSpawnLocation());
+            $player->sendMessage("§aYour island has been deleted and you've been teleported to spawn!");
+        } else {
+            $player->sendMessage("§aYour island has been deleted!");
+        }
         return true;
     }
 
@@ -265,17 +246,5 @@ class IslandManager {
         }
         
         return false;
-    }
-
-    private function deserializeItem(array $data): ?Item {
-        try {
-            $item = ItemFactory::getInstance()->get($data["id"], $data["meta"] ?? 0, $data["count"] ?? 1);
-            if (isset($data["nbt"])) {
-                $item->setNamedTag(CompoundTag::create());
-            }
-            return $item;
-        } catch (\Exception $e) {
-            return null;
-        }
     }
 }

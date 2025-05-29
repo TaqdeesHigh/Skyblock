@@ -6,7 +6,6 @@ namespace taqdees\Skyblock\commands;
 
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
-use pocketmine\block\VanillaBlocks;
 use jojoe77777\FormAPI\SimpleForm;
 use jojoe77777\FormAPI\CustomForm;
 use taqdees\Skyblock\Main;
@@ -125,18 +124,9 @@ class AdminCommand {
 
         $this->plugin->getDataManager()->setSkyblockWorld($worldName);
         $player->sendMessage("§aWorld '$worldName' has been set as the Skyblock world!");
-        $chestBlock = VanillaBlocks::CHEST()->asItem();
-        $chestBlock->setCustomName("§bTemplate Chest");
-        $chestBlock->setLore([
-            "§7Place this chest to set the template",
-            "§7location and fill it with items",
-            "§7that new players will receive"
-        ]);
-        
-        $player->getInventory()->addItem($chestBlock);
-        $player->sendMessage("§7Place the template chest and fill it with starting items.");
+        $player->sendMessage("§7Setup complete! You can now exit edit mode.");
         $player->teleport($world->getSpawnLocation());
-        $player->sendMessage("§aTeleported to the Skyblock world!");
+        $player->sendMessage("§aTeleported to the Skyblock world for verification!");
     }
 
     private function exitEditMode(Player $player): void {
@@ -150,13 +140,12 @@ class AdminCommand {
         $this->plugin->setEditMode($player->getName(), false);
         $player->sendMessage("§aExited Skyblock Edit Mode!");
         $player->getInventory()->clearAll();
-        
-        $world = $this->plugin->getServer()->getWorldManager()->getWorldByName($skyblockWorld);
-        if ($world !== null) {
-            $player->teleport($world->getSpawnLocation());
-            $player->sendMessage("§aTeleported to Skyblock world!");
+        $defaultWorld = $this->plugin->getServer()->getWorldManager()->getDefaultWorld();
+        if ($defaultWorld !== null) {
+            $player->teleport($defaultWorld->getSpawnLocation());
+            $player->sendMessage("§aTeleported back to the default world!");
         } else {
-            $player->sendMessage("§cSkyblock world not found! Make sure the world is loaded.");
+            $player->sendMessage("§eSetup complete! Default world not found for teleportation.");
         }
     }
 }
