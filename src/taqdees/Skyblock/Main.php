@@ -10,16 +10,23 @@ use pocketmine\command\CommandSender;
 use pocketmine\player\Player;
 use pocketmine\utils\Config;
 use pocketmine\world\WorldManager;
+use pocketmine\entity\EntityDataHelper;
+use pocketmine\entity\EntityFactory;
+use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\world\World;
 use taqdees\Skyblock\commands\IslandCommand;
 use taqdees\Skyblock\commands\AdminCommand;
 use taqdees\Skyblock\listeners\EventListener;
 use taqdees\Skyblock\managers\IslandManager;
 use taqdees\Skyblock\managers\DataManager;
+use taqdees\Skyblock\managers\NPCManager;
+use taqdees\Skyblock\entities\OzzyNPC;
 
 class Main extends PluginBase {
 
     private IslandManager $islandManager;
     private DataManager $dataManager;
+    private NPCManager $npcManager;
     private AdminCommand $adminCommand;
     private IslandCommand $islandCommand;
     
@@ -28,14 +35,21 @@ class Main extends PluginBase {
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
+        $this->registerEntities();
         $this->initializeManagers();
         $this->registerListeners();
-        $this->getLogger()->info("Skyblock plugin enabled!");
+    }
+
+    private function registerEntities(): void {
+        EntityFactory::getInstance()->register(OzzyNPC::class, function(World $world, CompoundTag $nbt): OzzyNPC {
+            return new OzzyNPC($this, EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
+        }, ['OzzyNPC', 'taqdees:ozzynpc']);
     }
 
     private function initializeManagers(): void {
         $this->dataManager = new DataManager($this);
         $this->islandManager = new IslandManager($this, $this->dataManager);
+        $this->npcManager = new NPCManager($this);
         $this->adminCommand = new AdminCommand($this);
         $this->islandCommand = new IslandCommand($this, $this->islandManager);
     }
@@ -65,6 +79,10 @@ class Main extends PluginBase {
 
     public function getDataManager(): DataManager {
         return $this->dataManager;
+    }
+
+    public function getNPCManager(): NPCManager {
+        return $this->npcManager;
     }
 
     public function isInEditMode(string $playerName): bool {

@@ -8,11 +8,14 @@ use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerInteractEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockBreakEvent;
+use pocketmine\event\entity\EntitySpawnEvent;
+use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
-use pocketmine\event\player\PlayerItemUseEvent;
+use pocketmine\block\VanillaBlocks;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\commands\AdminCommand;
+use taqdees\Skyblock\entities\OzzyNPC;
 
 class EventListener implements Listener {
 
@@ -25,7 +28,7 @@ class EventListener implements Listener {
     public function onPlayerInteract(PlayerInteractEvent $event): void {
         $player = $event->getPlayer();
         $item = $event->getItem();
-        
+        $action = $event->getAction();
         if ($this->plugin->isInEditMode($player->getName()) && 
             $item->getTypeId() === VanillaItems::COMPASS()->getTypeId()) {
             
@@ -34,6 +37,47 @@ class EventListener implements Listener {
                 $event->cancel();
                 $adminCommand = new AdminCommand($this->plugin);
                 $adminCommand->openSetupForm($player);
+                return;
+            }
+        }
+        if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
+            $customName = $item->getCustomName();
+
+            if ($customName === "§6Ozzy's Egg" && $this->plugin->isInEditMode($player->getName())) {
+                $event->cancel();
+                $block = $event->getBlock();
+                $blockPos = $block->getPosition();
+                $spawnVector = $blockPos->add(0.5, 1, 0.5);
+                $spawnPosition = new \pocketmine\world\Position(
+                    $spawnVector->getX(),
+                    $spawnVector->getY(),
+                    $spawnVector->getZ(),
+                    $blockPos->getWorld()
+                );
+                
+                if ($this->plugin->getNPCManager()->spawnNPC($player, $spawnPosition)) {
+                    $item->setCount($item->getCount() - 1);
+                    $player->getInventory()->setItemInHand($item);
+                }
+                return;
+            }
+
+            if ($customName === "§bLocation Egg" && $this->plugin->getNPCManager()->isInPlacingMode($player->getName())) {
+                $event->cancel();
+                $block = $event->getBlock();
+                $blockPos = $block->getPosition();
+                $spawnVector = $blockPos->add(0.5, 1, 0.5);
+                $spawnPosition = new \pocketmine\world\Position(
+                    $spawnVector->getX(),
+                    $spawnVector->getY(),
+                    $spawnVector->getZ(),
+                    $blockPos->getWorld()
+                );
+                
+                if ($this->plugin->getNPCManager()->handleLocationEggUse($player, $spawnPosition)) {
+                    $item->setCount($item->getCount() - 1);
+                    $player->getInventory()->setItemInHand($item);
+                }
                 return;
             }
         }
@@ -53,6 +97,13 @@ class EventListener implements Listener {
                 $adminCommand->openSetupForm($player);
                 return;
             }
+        }
+    }
+
+    public function onEntitySpawn(EntitySpawnEvent $event): void {
+        $entity = $event->getEntity();
+        if ($entity instanceof OzzyNPC) {
+            $this->plugin->getLogger()->info("Ozzy NPC spawned at " . $entity->getPosition());
         }
     }
 

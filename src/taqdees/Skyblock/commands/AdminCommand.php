@@ -39,10 +39,12 @@ class AdminCommand {
         $compass = VanillaItems::COMPASS();
         $compass->setCustomName("§bSkyblock Setup Compass");
         $compass->setLore(["§7Right-click to open setup menu"]);
-        
+        $ozzyEgg = $this->plugin->getNPCManager()->createOzzyEgg();
         $player->getInventory()->setItem(0, $compass);
+        $player->getInventory()->setItem(1, $ozzyEgg);
         $player->sendMessage("§aEntered Skyblock Edit Mode!");
         $player->sendMessage("§7Right-click the compass to open the setup menu.");
+        $player->sendMessage("§7Right-click Ozzy's Egg to spawn your NPC assistant!");
     }
 
     public function openSetupForm(Player $player): void {
