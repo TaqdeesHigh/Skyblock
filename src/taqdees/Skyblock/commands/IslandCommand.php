@@ -38,21 +38,19 @@ class IslandCommand {
                 
             case "sethome":
                 return $this->islandManager->setHome($player);
-                
             case "invite":
                 if (!isset($args[1])) {
-                    $player->sendMessage("§cUsage: /is invite <player>");
+                    $player->sendMessage("§cUsage: /island invite <player>");
                     return true;
                 }
                 return $this->islandManager->inviteMember($player, $args[1]);
                 
             case "kick":
                 if (!isset($args[1])) {
-                    $player->sendMessage("§cUsage: /is kick <player>");
+                    $player->sendMessage("§cUsage: /island kick <player>");
                     return true;
                 }
                 return $this->islandManager->kickMember($player, $args[1]);
-                
             case "leave":
                 return $this->islandManager->leaveIsland($player);
                 
@@ -75,13 +73,14 @@ class IslandCommand {
 
     private function sendHelpMessage(Player $player): void {
         $player->sendMessage("§b=== Skyblock Commands ===");
-        $player->sendMessage("§7/is create §f- Create your island");
-        $player->sendMessage("§7/is home §f- Teleport to your island");
-        $player->sendMessage("§7/is sethome §f- Set home location");
-        $player->sendMessage("§7/is invite <player> §f- Invite a player");
-        $player->sendMessage("§7/is kick <player> §f- Kick a player");
-        $player->sendMessage("§7/is leave §f- Leave current island");
-        $player->sendMessage("§7/is members §f- List island members");
-        $player->sendMessage("§7/is delete §f- Delete your island");
+        $player->sendMessage("§7/island create §f- Create your island");
+        $player->sendMessage("§7/island home §f- Teleport to your island");
+        $player->sendMessage("§7/island sethome §f- Set home location");
+        $player->sendMessage("§7/island invite <player> §f- Invite a player");
+        $player->sendMessage("§7/island kick <player> §f- Kick a player");
+        $player->sendMessage("§7/island leave §f- Leave current island");
+        $player->sendMessage("§7/island members §f- List island members");
+        $player->sendMessage("§7/island delete §f- Delete your island");
+        $player->sendMessage("§7You can also use §b/is §7as a shortcut!");
     }
 }

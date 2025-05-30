@@ -72,7 +72,7 @@ class Main extends PluginBase {
         switch ($command->getName()) {
             case "skyblock":
                 return $this->adminCommand->handleCommand($sender, $args);
-            case "is":
+            case "island":
                 return $this->islandCommand->handleCommand($sender, $args);
         }
         return false;
