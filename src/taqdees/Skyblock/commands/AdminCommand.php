@@ -6,6 +6,7 @@ namespace taqdees\Skyblock\commands;
 
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
+use pocketmine\world\Position;
 use jojoe77777\FormAPI\SimpleForm;
 use jojoe77777\FormAPI\CustomForm;
 use taqdees\Skyblock\Main;
@@ -61,21 +62,27 @@ class AdminCommand {
                     $this->openWorldSelectionForm($player);
                     break;
                 case 1:
+                    $this->setPlayerPosition($player);
+                    break;
+                case 2:
                     $this->exitEditMode($player);
                     break;
             }
         });
 
-        $form->setTitle("§bSkyblock Setup");
-        $form->setContent("§7Configure your Skyblock world settings:");
+        $form->setTitle("Skyblock Setup");
+        $form->setContent("Configure your Skyblock world settings:");
         
-        $form->addButton("§aSetup Skyblock World\n§7Choose a world for Skyblock");
+        $form->addButton("Setup Skyblock World\nChoose a world for Skyblock");
+        $form->addButton("Set Player Position\nSet spawn position for new islands");
         
         $skyblockWorld = $this->plugin->getDataManager()->getSkyblockWorld();
-        if ($skyblockWorld !== null && $skyblockWorld !== "") {
-            $form->addButton("§cDone\n§7Exit setup mode");
+        $playerPosition = $this->plugin->getDataManager()->getPlayerSpawnPosition();
+        
+        if ($skyblockWorld !== null && $skyblockWorld !== "" && $playerPosition !== null) {
+            $form->addButton("Done\nExit setup mode");
         } else {
-            $form->addButton("§8Done\n§7(Select a world first)");
+            $form->addButton("Done\n(Complete setup first)");
         }
 
         $player->sendForm($form);
@@ -108,9 +115,9 @@ class AdminCommand {
             $this->setupSkyblockWorld($player, $selectedWorld);
         });
 
-        $form->setTitle("§bSelect Skyblock World");
-        $form->addDropdown("§7Choose a world to use for Skyblock:", $worldNames);
-        $form->addLabel("§7This will set the selected world as your Skyblock world.\n§7Make sure the world contains pre-built islands!");
+        $form->setTitle("Select Skyblock World");
+        $form->addDropdown("Choose a world to use for Skyblock:", $worldNames);
+        $form->addLabel("This will set the selected world as your Skyblock world.\nMake sure the world contains pre-built islands!");
 
         $player->sendForm($form);
     }
@@ -126,15 +133,34 @@ class AdminCommand {
 
         $this->plugin->getDataManager()->setSkyblockWorld($worldName);
         $player->sendMessage("§aWorld '$worldName' has been set as the Skyblock world!");
-        $player->sendMessage("§7Setup complete! You can now exit edit mode.");
+        $player->sendMessage("§7You can now set the player spawn position and then exit edit mode.");
         $player->teleport($world->getSpawnLocation());
         $player->sendMessage("§aTeleported to the Skyblock world for verification!");
     }
 
+    private function setPlayerPosition(Player $player): void {
+        $position = $player->getPosition();
+        $this->plugin->getDataManager()->setPlayerSpawnPosition($position);
+        $player->sendMessage("§aPlayer spawn position has been set!");
+        $player->sendMessage("§7Position: X=" . round($position->getX(), 2) . 
+                           " Y=" . round($position->getY(), 2) . 
+                           " Z=" . round($position->getZ(), 2) . 
+                           " World=" . $position->getWorld()->getFolderName());
+        $player->sendMessage("§7New islands will spawn players at this location.");
+    }
+
     private function exitEditMode(Player $player): void {
         $skyblockWorld = $this->plugin->getDataManager()->getSkyblockWorld();
+        $playerPosition = $this->plugin->getDataManager()->getPlayerSpawnPosition();
+        
         if ($skyblockWorld === null || $skyblockWorld === "") {
             $player->sendMessage("§cPlease setup a Skyblock world first!");
+            $this->openSetupForm($player);
+            return;
+        }
+        
+        if ($playerPosition === null) {
+            $player->sendMessage("§cPlease set the player spawn position first!");
             $this->openSetupForm($player);
             return;
         }

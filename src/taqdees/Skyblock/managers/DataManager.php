@@ -6,6 +6,7 @@ namespace taqdees\Skyblock\managers;
 
 use pocketmine\utils\Config;
 use pocketmine\world\Position;
+use pocketmine\Server;
 use taqdees\Skyblock\Main;
 
 class DataManager {
@@ -26,27 +27,32 @@ class DataManager {
         ]);
         
         $this->settingsConfig = new Config($this->plugin->getDataFolder() . "settings.yml", Config::YAML, [
-            "skyblock_world" => null
+            "skyblock_world" => null,
+            "player_spawn_position" => null
         ]);
     }
 
-    public function createIsland(string $playerName, Position $position): array {
+    public function createIsland(string $playerName, Position $position, string $worldName): array {
         $islandId = $this->getNextIslandId();
+        $spawnPos = $this->getPlayerSpawnPosition();
+        $homePosition = $spawnPos ?? $position;
+        
         $islandData = [
             "id" => $islandId,
             "owner" => $playerName,
             "members" => [$playerName],
+            "world_name" => $worldName,
             "position" => [
                 "x" => $position->getX(),
                 "y" => $position->getY(),
                 "z" => $position->getZ(),
-                "world" => $position->getWorld()->getFolderName()
+                "world" => $worldName
             ],
             "home" => [
-                "x" => $position->getX(),
-                "y" => $position->getY() + 1,
-                "z" => $position->getZ(),
-                "world" => $position->getWorld()->getFolderName()
+                "x" => $homePosition->getX(),
+                "y" => $homePosition->getY(),
+                "z" => $homePosition->getZ(),
+                "world" => $homePosition->getWorld()->getFolderName()
             ],
             "created" => time()
         ];
@@ -95,6 +101,41 @@ class DataManager {
             return null;
         }
         return $world;
+    }
+
+    public function setPlayerSpawnPosition(Position $position): void {
+        $positionData = [
+            "x" => $position->getX(),
+            "y" => $position->getY(),
+            "z" => $position->getZ(),
+            "world" => $position->getWorld()->getFolderName()
+        ];
+        $this->settingsConfig->set("player_spawn_position", $positionData);
+        $this->settingsConfig->save();
+    }
+
+    public function getPlayerSpawnPosition(): ?Position {
+        $positionData = $this->settingsConfig->get("player_spawn_position", null);
+        if (!is_array($positionData)) {
+            return null;
+        }
+
+        $worldName = $positionData["world"] ?? null;
+        if (!is_string($worldName)) {
+            return null;
+        }
+
+        $world = Server::getInstance()->getWorldManager()->getWorldByName($worldName);
+        if ($world === null) {
+            return null;
+        }
+
+        return new Position(
+            (float)($positionData["x"] ?? 0),
+            (float)($positionData["y"] ?? 0),
+            (float)($positionData["z"] ?? 0),
+            $world
+        );
     }
 
     private function getNextIslandId(): int {

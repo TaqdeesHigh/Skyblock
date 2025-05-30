@@ -12,10 +12,6 @@ use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\entity\Skin;
 use pocketmine\math\Vector3;
-use pocketmine\network\mcpe\protocol\MoveActorAbsolutePacket;
-use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
-use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataFlags;
-use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataProperties;
 use pocketmine\entity\Entity;
 use taqdees\Skyblock\Main;
 
@@ -23,7 +19,10 @@ class OzzyNPC extends Human {
 
     private string $customName = "Ozzy";
     private Main $plugin;
-    private int $lookAtCooldown = 0;
+    private bool $isGrounded = false;
+    private float $groundY = 0.0;
+    private bool $positionLocked = false;
+    private ?Vector3 $lockedPosition = null;
 
     public function __construct(Main $plugin, Location $location = null, Skin $skin = null, CompoundTag $nbt = null) {
         $this->plugin = $plugin;
@@ -65,8 +64,47 @@ class OzzyNPC extends Human {
         $this->setNameTagAlwaysVisible(true);
         $this->setCanSaveWithChunk(true);
         $this->loadCustomSkin();
+        $this->findGroundLevel();
+        $this->lockPosition();
         $this->setHasGravity(false);
         $this->setMotion(new Vector3(0, 0, 0));
+    }
+
+    private function findGroundLevel(): void {
+        $world = $this->getWorld();
+        $x = (int) floor($this->location->x);
+        $z = (int) floor($this->location->z);
+        $startY = (int) floor($this->location->y);
+        for ($y = $startY; $y >= $world->getMinY(); $y--) {
+            $block = $world->getBlockAt($x, $y, $z);
+            if ($block->isSolid() && !$block->isTransparent()) {
+                $this->groundY = $y + 1.0;
+                $this->isGrounded = true;
+                $this->location->y = $this->groundY;
+                break;
+            }
+        }
+        if (!$this->isGrounded) {
+            $this->groundY = $this->location->y;
+            $this->isGrounded = true;
+        }
+    }
+
+    private function lockPosition(): void {
+        $this->lockedPosition = new Vector3($this->location->x, $this->groundY, $this->location->z);
+        $this->positionLocked = true;
+    }
+
+    private function enforcePosition(): void {
+        if ($this->positionLocked && $this->lockedPosition !== null) {
+            $currentPos = $this->getPosition();
+            if ($currentPos->distance($this->lockedPosition) > 0.01) {
+                $this->location->x = $this->lockedPosition->x;
+                $this->location->y = $this->lockedPosition->y;
+                $this->location->z = $this->lockedPosition->z;
+                parent::setPosition($this->lockedPosition);
+            }
+        }
     }
 
     private function loadCustomSkin(): void {
@@ -95,83 +133,46 @@ class OzzyNPC extends Human {
     }
 
     public function onUpdate(int $currentTick): bool {
+        $this->enforcePosition();
         $this->setMotion(new Vector3(0, 0, 0));
+        $result = parent::onUpdate($currentTick);
+        $this->enforcePosition();
         
-        if ($this->lookAtCooldown > 0) {
-            $this->lookAtCooldown--;
-        }
-        
-        if ($this->lookAtCooldown <= 0) {
-            $this->lookAtNearbyPlayers();
-            $this->lookAtCooldown = 10;
-        }
-        
-        return parent::onUpdate($currentTick);
+        return $result;
     }
 
-    protected function applyGravity(): void {
-    }
+    protected function applyGravity(): void {}
 
     public function entityBaseTick(int $tickDiff = 1): bool {
         $this->setMotion(new Vector3(0, 0, 0));
-        return parent::entityBaseTick($tickDiff);
-    }
-
-    private function lookAtNearbyPlayers(): void {
-        $nearbyPlayers = [];
-        $maxDistance = 10.0;
+        $this->enforcePosition();
+        $result = parent::entityBaseTick($tickDiff);
+        $this->enforcePosition();
         
-        foreach ($this->getWorld()->getPlayers() as $player) {
-            if ($this->getPosition()->distance($player->getPosition()) <= $maxDistance) {
-                $nearbyPlayers[] = $player;
-            }
-        }
-        
-        if (!empty($nearbyPlayers)) {
-            $closestPlayer = null;
-            $closestDistance = $maxDistance + 1;
-            
-            foreach ($nearbyPlayers as $player) {
-                $distance = $this->getPosition()->distance($player->getPosition());
-                if ($distance < $closestDistance) {
-                    $closestDistance = $distance;
-                    $closestPlayer = $player;
-                }
-            }
-            
-            if ($closestPlayer !== null) {
-                $this->lookAtPosition($closestPlayer->getPosition());
-            }
-        }
+        return $result;
     }
 
-    private function lookAtPosition(Vector3 $target): void {
-        $horizontal = sqrt(($target->x - $this->location->x) ** 2 + ($target->z - $this->location->z) ** 2);
-        $vertical = $target->y - $this->location->y;
+    protected function checkBlockCollision(): void {}
 
-        $pitch = -atan2($vertical, $horizontal) / M_PI * 180;
-        $yaw = atan2($target->z - $this->location->z, $target->x - $this->location->x) / M_PI * 180 - 90;
-
-        if ($yaw < 0) {
-            $yaw += 360.0;
+    public function move(float $dx, float $dy, float $dz): void {
+        if ($this->positionLocked) {
+            return;
         }
-
-        $this->setRotation($yaw, $pitch);
-
-        $pk = new MoveActorAbsolutePacket();
-        $pk->actorRuntimeId = $this->getId();
-        $pk->position = $this->getPosition()->asVector3();
-        $pk->yaw = $yaw;
-        $pk->pitch = $pitch;
-        $pk->headYaw = $yaw;
-        $pk->flags = MoveActorAbsolutePacket::FLAG_GROUND | MoveActorAbsolutePacket::FLAG_TELEPORT;
-
-        foreach ($this->getViewers() as $viewer) {
-            $viewer->getNetworkSession()->sendDataPacket($pk);
-        }
-
+        parent::move($dx, $dy, $dz);
     }
 
+    public function teleport(Vector3 $pos, ?float $yaw = null, ?float $pitch = null): bool {
+        $wasLocked = $this->positionLocked;
+        $this->positionLocked = false;
+        $result = parent::teleport($pos, $yaw, $pitch);
+        if ($result) {
+            $this->findGroundLevel();
+            $this->lockPosition();
+        } else {
+            $this->positionLocked = $wasLocked;
+        }
+        return $result;
+    }
 
     public function attack(EntityDamageEvent $source): void {
         $source->cancel();
@@ -193,12 +194,33 @@ class OzzyNPC extends Human {
     public function saveNBT(): CompoundTag {
         $nbt = parent::saveNBT();
         $nbt->setString("customName", $this->customName);
+        $nbt->setFloat("groundY", $this->groundY);
+        $nbt->setByte("isGrounded", $this->isGrounded ? 1 : 0);
+        if ($this->lockedPosition !== null) {
+            $nbt->setFloat("lockedX", $this->lockedPosition->x);
+            $nbt->setFloat("lockedY", $this->lockedPosition->y);
+            $nbt->setFloat("lockedZ", $this->lockedPosition->z);
+        }
         return $nbt;
     }
 
     public function readSaveData(CompoundTag $nbt): void {
         parent::readSaveData($nbt);
         $this->customName = $nbt->getString("customName", "Ozzy");
+        $this->groundY = $nbt->getFloat("groundY", $this->location->y);
+        $this->isGrounded = $nbt->getByte("isGrounded", 1) === 1;
+        
+        if ($nbt->hasTag("lockedX") && $nbt->hasTag("lockedY") && $nbt->hasTag("lockedZ")) {
+            $this->lockedPosition = new Vector3(
+                $nbt->getFloat("lockedX"),
+                $nbt->getFloat("lockedY"),
+                $nbt->getFloat("lockedZ")
+            );
+            $this->positionLocked = true;
+        } else {
+            $this->lockPosition();
+        }
+        
         $this->setNameTag($this->customName);
     }
 }
