@@ -68,14 +68,10 @@ class IslandManager {
 
     public function isOnIsland(Player $player, Position $position): bool {
         $currentWorldName = $position->getWorld()->getFolderName();
-        
-        // Check if player owns this island
         $islandData = $this->dataManager->getIsland($player->getName());
         if ($islandData !== null && $islandData["world_name"] === $currentWorldName) {
             return true;
         }
-
-        // Check if player is a member of this island
         $allIslands = $this->dataManager->getAllIslands();
         foreach ($allIslands as $owner => $data) {
             if (in_array($player->getName(), $data["members"]) && $data["world_name"] === $currentWorldName) {

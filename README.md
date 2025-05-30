@@ -5,6 +5,21 @@ Currently in **very early development**, this plugin aims to bring a fully-featu
 
 > ⚠️ This project is **not functional yet**. Many features are incomplete or not implemented. Use at your own risk. Updates will be made as development progresses.
 
+---
+
+## TODO
+
+Here's a list of major features planned for the plugin:
+
+- [ ] Island Generator  
+- [ ] Custom Features & Systems  
+- [ ] Slav... uhm uhm I mean Minions
+- [ ] Farming System  
+- [ ] Bazaar & Economy System  
+- [ ] Scoreboard Integration  
+
+---
+
 ## Contributing
 
 Contributions are welcome!  
