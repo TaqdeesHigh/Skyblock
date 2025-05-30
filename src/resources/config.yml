@@ -35,7 +35,6 @@ database:
 island:
   generation:
     spawn_height: 64
-    # World name prefix for individual islands
     world_prefix: "island_"
   
   # Starter items in chest
