@@ -8,18 +8,15 @@ use pocketmine\player\Player;
 use pocketmine\Server;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\managers\DataManager;
-use taqdees\Skyblock\utils\WorldUtils;
 
 class IslandDeletionService {
 
     private Main $plugin;
     private DataManager $dataManager;
-    private WorldUtils $worldUtils;
 
     public function __construct(Main $plugin, DataManager $dataManager) {
         $this->plugin = $plugin;
         $this->dataManager = $dataManager;
-        $this->worldUtils = new WorldUtils($plugin);
     }
 
     public function deleteIsland(Player $player): bool {
