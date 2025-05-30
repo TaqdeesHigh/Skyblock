@@ -25,27 +25,47 @@ class IslandDeletionService {
     public function deleteIsland(Player $player): bool {
         $islandData = $this->dataManager->getIsland($player->getName());
         if ($islandData === null) {
-            $player->sendMessage("§cYou don't have an island!");
+            $player->sendMessage("§cYou don't have an island to delete!");
             return false;
         }
 
-        if ($islandData["owner"] !== $player->getName()) {
-            $player->sendMessage("§cOnly the island owner can delete the island!");
-            return false;
+        $worldName = "island_" . strtolower($player->getName());
+        $server = Server::getInstance();
+        $worldManager = $server->getWorldManager();
+        $world = $worldManager->getWorldByName($worldName);
+        if ($world !== null) {
+            foreach ($world->getPlayers() as $worldPlayer) {
+                $spawnWorld = $server->getWorldManager()->getDefaultWorld();
+                $worldPlayer->teleport($spawnWorld->getSpawnLocation());
+                $worldPlayer->sendMessage("§7You have been teleported to spawn as the island was deleted.");
+            }
+            $worldManager->unloadWorld($world);
         }
-
-        $worldName = $islandData["world_name"];
         $this->dataManager->deleteIsland($player->getName());
-        $this->worldUtils->deleteWorld($worldName);
-        
-        $defaultWorld = Server::getInstance()->getWorldManager()->getDefaultWorld();
-        if ($defaultWorld !== null) {
-            $player->teleport($defaultWorld->getSpawnLocation());
-            $player->sendMessage("§aYour island has been deleted and you've been teleported to spawn!");
-        } else {
-            $player->sendMessage("§aYour island has been deleted!");
+        $worldPath = $server->getDataPath() . "worlds/" . $worldName;
+        if (is_dir($worldPath)) {
+            $this->deleteDirectory($worldPath);
+        }
+
+        $player->sendMessage("§aYour island has been deleted successfully!");
+        return true;
+    }
+
+    private function deleteDirectory(string $dir): bool {
+        if (!is_dir($dir)) {
+            return false;
         }
         
-        return true;
+        $files = array_diff(scandir($dir), ['.', '..']);
+        foreach ($files as $file) {
+            $path = $dir . DIRECTORY_SEPARATOR . $file;
+            if (is_dir($path)) {
+                $this->deleteDirectory($path);
+            } else {
+                unlink($path);
+            }
+        }
+        
+        return rmdir($dir);
     }
 }

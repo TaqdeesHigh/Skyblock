@@ -36,6 +36,7 @@ class Main extends PluginBase {
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->registerEntities();
+        $this->registerGenerators();
         $this->initializeManagers();
         $this->registerListeners();
     }
@@ -44,6 +45,10 @@ class Main extends PluginBase {
         EntityFactory::getInstance()->register(OzzyNPC::class, function(World $world, CompoundTag $nbt): OzzyNPC {
             return new OzzyNPC($this, EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
         }, ['OzzyNPC', 'taqdees:ozzynpc']);
+    }
+
+    private function registerGenerators(): void {
+        \taqdees\Skyblock\generators\VoidWorldGenerator::register();
     }
 
     private function initializeManagers(): void {
@@ -100,4 +105,19 @@ class Main extends PluginBase {
     public function getAdminEditMode(): array {
         return $this->adminEditMode;
     }
+
+    public function getConfigValue(string $path, $default = null) {
+        $keys = explode('.', $path);
+        $value = $this->getConfig()->getAll();
+        
+        foreach ($keys as $key) {
+            if (!isset($value[$key])) {
+                return $default;
+            }
+            $value = $value[$key];
+        }
+        
+        return $value;
+    }
+    
 }

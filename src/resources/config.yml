@@ -6,22 +6,21 @@ settings:
   # Maximum island members (including owner)
   max_members: 4
   
-  # Island protection radius
+  # Island protection radius (not really needed since each player has own world, but kept for future use)
   protection_radius: 50
-  
-  # Island spacing (distance between islands)
-  island_spacing: 100
-  
-  # Default island grid size before moving to next layer
-  grid_size: 10
 
 # Messages
 messages:
   prefix: "§b[Skyblock]§r "
   no_permission: "§cYou don't have permission to use this command!"
   player_only: "§cThis command can only be used by players!"
+  island_created: "§aIsland created successfully! Welcome to your personal island!"
+  island_creation_failed: "§cFailed to create your island. Please try again."
+  already_have_island: "§cYou already have an island! You can only create one island."
+  no_island: "§cYou don't have an island! Use /is create to make one."
+  welcome_back: "§aWelcome back to your island!"
   
-# Database settings (for future expansion)
+# Database settings
 database:
   type: "yaml" # yaml, sqlite, mysql
   # For future MySQL support
@@ -31,3 +30,19 @@ database:
     database: "skyblock"
     username: "root"
     password: ""
+
+# Island settings
+island:
+  generation:
+    spawn_height: 64
+    # World name prefix for individual islands
+    world_prefix: "island_"
+  
+  # Starter items in chest
+  starter_items:
+    - "bread:8" 
+
+# World settings
+world:
+  auto_cleanup_empty_worlds: false # Set to true if you want to auto-delete empty island worlds
+  max_loaded_worlds: 50 # Limit concurrent loaded island worlds for performance

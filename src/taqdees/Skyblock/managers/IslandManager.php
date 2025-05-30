@@ -68,14 +68,17 @@ class IslandManager {
 
     public function isOnIsland(Player $player, Position $position): bool {
         $currentWorldName = $position->getWorld()->getFolderName();
-        $islandData = $this->dataManager->getIsland($player->getName());
-        if ($islandData !== null && $islandData["world_name"] === $currentWorldName) {
+        $expectedWorldName = "island_" . strtolower($player->getName());
+        if ($currentWorldName === $expectedWorldName) {
             return true;
         }
         $allIslands = $this->dataManager->getAllIslands();
         foreach ($allIslands as $owner => $data) {
-            if (in_array($player->getName(), $data["members"]) && $data["world_name"] === $currentWorldName) {
-                return true;
+            if (in_array($player->getName(), $data["members"])) {
+                $ownerWorldName = "island_" . strtolower($owner);
+                if ($currentWorldName === $ownerWorldName) {
+                    return true;
+                }
             }
         }
         

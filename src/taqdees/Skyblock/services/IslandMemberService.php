@@ -137,4 +137,46 @@ class IslandMemberService {
             $player->sendMessage("§7You have been teleported to spawn.");
         }
     }
+
+    public function teleportToMemberIsland(Player $player, string $ownerName): bool {
+        $islandData = $this->dataManager->getIsland($ownerName);
+        if ($islandData === null) {
+            $player->sendMessage("§cThat player doesn't have an island!");
+            return false;
+        }
+
+        if (!in_array($player->getName(), $islandData["members"])) {
+            $player->sendMessage("§cYou're not a member of that island!");
+            return false;
+        }
+
+        $worldName = "island_" . strtolower($ownerName);
+        $server = Server::getInstance();
+        $worldManager = $server->getWorldManager();
+        
+        if (!$worldManager->isWorldLoaded($worldName)) {
+            if (!$worldManager->loadWorld($worldName)) {
+                $player->sendMessage("§cFailed to load the island world!");
+                return false;
+            }
+        }
+
+        $world = $worldManager->getWorldByName($worldName);
+        if ($world === null) {
+            $player->sendMessage("§cIsland world is not accessible!");
+            return false;
+        }
+
+        $position = new Position(
+            $islandData["position"]["x"],
+            $islandData["position"]["y"] + 2,
+            $islandData["position"]["z"],
+            $world
+        );
+
+        $player->teleport($position);
+        $player->sendMessage("§aWelcome to {$ownerName}'s island!");
+        return true;
+    }
+
 }

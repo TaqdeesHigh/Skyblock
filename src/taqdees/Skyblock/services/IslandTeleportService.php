@@ -27,30 +27,34 @@ class IslandTeleportService {
             return false;
         }
 
-        $worldName = $islandData["world_name"];
-        $world = Server::getInstance()->getWorldManager()->getWorldByName($worldName);
-        
-        if ($world === null) {
-            if (!Server::getInstance()->getWorldManager()->loadWorld($worldName)) {
-                $player->sendMessage("§cYour island world could not be loaded! Please contact an administrator.");
+        $worldName = $islandData["world"];
+        $server = Server::getInstance();
+        $worldManager = $server->getWorldManager();
+        if (!$worldManager->isWorldLoaded($worldName)) {
+            if (!$worldManager->loadWorld($worldName)) {
+                $player->sendMessage("§cFailed to load your island world!");
                 return false;
             }
-            $world = Server::getInstance()->getWorldManager()->getWorldByName($worldName);
         }
-        
+
+        $world = $worldManager->getWorldByName($worldName);
         if ($world === null) {
-            $player->sendMessage("§cYour island world not found!");
+            $player->sendMessage("§cYour island world is not accessible!");
             return false;
         }
+        $homePos = $islandData["home"] ?? null;
+        if ($homePos !== null) {
+            $position = new Position($homePos["x"], $homePos["y"], $homePos["z"], $world);
+        } else {
+            $position = new Position(
+                $islandData["position"]["x"],
+                $islandData["position"]["y"] + 2,
+                $islandData["position"]["z"],
+                $world
+            );
+        }
 
-        $homePosition = new Position(
-            $islandData["home"]["x"],
-            $islandData["home"]["y"],
-            $islandData["home"]["z"],
-            $world
-        );
-
-        $player->teleport($homePosition);
+        $player->teleport($position);
         $player->sendMessage("§aWelcome back to your island!");
         return true;
     }
@@ -63,21 +67,16 @@ class IslandTeleportService {
         }
 
         $currentWorld = $player->getWorld()->getFolderName();
-        if ($currentWorld !== $islandData["world_name"]) {
+        $expectedWorld = "island_" . strtolower($player->getName());
+        
+        if ($currentWorld !== $expectedWorld) {
             $player->sendMessage("§cYou can only set home on your own island!");
             return false;
         }
 
         $position = $player->getPosition();
-        $islandData["home"] = [
-            "x" => $position->getX(),
-            "y" => $position->getY(),
-            "z" => $position->getZ(),
-            "world" => $position->getWorld()->getFolderName()
-        ];
-
-        $this->dataManager->updateIsland($player->getName(), $islandData);
-        $player->sendMessage("§aHome location set!");
+        $this->dataManager->setIslandHome($player->getName(), $position);
+        $player->sendMessage("§aHome position set!");
         return true;
     }
 }
