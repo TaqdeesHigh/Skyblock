@@ -7,7 +7,6 @@ namespace taqdees\Skyblock\generators\structures;
 use pocketmine\world\World;
 use pocketmine\world\Position;
 use pocketmine\block\VanillaBlocks;
-use pocketmine\block\Stair;
 use pocketmine\block\tile\Chest;
 use pocketmine\inventory\Inventory;
 use pocketmine\item\VanillaItems;
@@ -22,78 +21,57 @@ class MineshaftStructure {
     }
 
     public function generateEntrance(World $world, int $x, int $y, int $z): void {
-        $entranceX = $x - 10;
-        $entranceY = $y + 2;
+        $entranceX = $x + 8;
+        $entranceY = $y;
         $entranceZ = $z;
 
-        $this->clearEntrance($world, $entranceX, $entranceY, $entranceZ);
-        $this->buildEntranceFrame($world, $entranceX, $entranceY, $entranceZ);
-        $this->buildStairway($world, $entranceX, $entranceY, $entranceZ);
+        $this->clearSideEntrance($world, $entranceX, $entranceY, $entranceZ);
+        $this->buildSideEntrance($world, $entranceX, $entranceY, $entranceZ);
     }
 
-    private function clearEntrance(World $world, int $x, int $y, int $z): void {
-        for ($clearX = 0; $clearX <= 2; $clearX++) {
-            for ($clearY = 0; $clearY <= 3; $clearY++) {
-                $world->setBlockAt($x + $clearX, $y + $clearY, $z, VanillaBlocks::AIR());
-                $world->setBlockAt($x + $clearX, $y + $clearY, $z + 1, VanillaBlocks::AIR());
-                $world->setBlockAt($x + $clearX, $y + $clearY, $z - 1, VanillaBlocks::AIR());
+    private function clearSideEntrance(World $world, int $x, int $y, int $z): void {
+        for ($dx = 0; $dx <= 4; $dx++) {
+            for ($dy = 0; $dy <= 2; $dy++) {
+                $world->setBlockAt($x - $dx, $y + $dy, $z, VanillaBlocks::AIR());
+                $world->setBlockAt($x - $dx, $y + $dy, $z + 1, VanillaBlocks::AIR());
+                $world->setBlockAt($x - $dx, $y + $dy, $z - 1, VanillaBlocks::AIR());
             }
         }
     }
 
-    private function buildEntranceFrame(World $world, int $x, int $y, int $z): void {
-        for ($frameY = 0; $frameY <= 3; $frameY++) {
-            $world->setBlockAt($x, $y + $frameY, $z + 2, VanillaBlocks::OAK_PLANKS());
-            $world->setBlockAt($x, $y + $frameY, $z - 2, VanillaBlocks::OAK_PLANKS());
-        }
-        for ($frameZ = -2; $frameZ <= 2; $frameZ++) {
-            $world->setBlockAt($x, $y + 3, $z + $frameZ, VanillaBlocks::OAK_PLANKS());
-        }
-    }
-
-    private function buildStairway(World $world, int $x, int $y, int $z): void {
-        $currentX = $x + 1;
-        $currentY = $y;
-        
-        for ($step = 0; $step < 8; $step++) {
-            $currentX++;
-            $currentY--;
-            $stair = VanillaBlocks::OAK_STAIRS();
-            if ($stair instanceof Stair) {
-                $stair->setFacing(2);
-            }
-            $world->setBlockAt($currentX, $currentY, $z, $stair);
-            for ($clearHeight = 1; $clearHeight <= 3; $clearHeight++) {
-                $world->setBlockAt($currentX, $currentY + $clearHeight, $z, VanillaBlocks::AIR());
-                $world->setBlockAt($currentX, $currentY + $clearHeight, $z + 1, VanillaBlocks::AIR());
-                $world->setBlockAt($currentX, $currentY + $clearHeight, $z - 1, VanillaBlocks::AIR());
-            }
-            $world->setBlockAt($currentX, $currentY, $z + 2, VanillaBlocks::OAK_PLANKS());
-            $world->setBlockAt($currentX, $currentY, $z - 2, VanillaBlocks::OAK_PLANKS());
-            $world->setBlockAt($currentX, $currentY + 1, $z + 2, VanillaBlocks::OAK_PLANKS());
-            $world->setBlockAt($currentX, $currentY + 1, $z - 2, VanillaBlocks::OAK_PLANKS());
-            if ($step % 3 == 0) {
-                $world->setBlockAt($currentX, $currentY + 2, $z + 1, VanillaBlocks::TORCH());
-                $world->setBlockAt($currentX, $currentY + 2, $z - 1, VanillaBlocks::TORCH());
+    private function buildSideEntrance(World $world, int $x, int $y, int $z): void {
+        for ($dx = 0; $dx <= 4; $dx++) {
+            $world->setBlockAt($x - $dx, $y + 3, $z, VanillaBlocks::STONE());
+            $world->setBlockAt($x - $dx, $y + 3, $z + 1, VanillaBlocks::STONE());
+            $world->setBlockAt($x - $dx, $y + 3, $z - 1, VanillaBlocks::STONE());
+            $world->setBlockAt($x - $dx, $y - 1, $z, VanillaBlocks::STONE());
+            $world->setBlockAt($x - $dx, $y - 1, $z + 1, VanillaBlocks::STONE());
+            $world->setBlockAt($x - $dx, $y - 1, $z - 1, VanillaBlocks::STONE());
+            for ($dy = 0; $dy <= 2; $dy++) {
+                $world->setBlockAt($x - $dx, $y + $dy, $z + 2, VanillaBlocks::STONE());
+                $world->setBlockAt($x - $dx, $y + $dy, $z - 2, VanillaBlocks::STONE());
+                if ($dx % 2 == 0) {
+                    $world->setBlockAt($x - $dx, $y + $dy, $z + 2, VanillaBlocks::COBBLESTONE());
+                    $world->setBlockAt($x - $dx, $y + $dy, $z - 2, VanillaBlocks::COBBLESTONE());
+                }
             }
         }
     }
 
     public function generateUnderground(World $world, Position $center): void {
-        $x = (int)$center->getX();
-        $y = (int)$center->getY() - 6;
+        $x = (int)$center->getX() + 4;
+        $y = (int)$center->getY() - 2;
         $z = (int)$center->getZ();
 
         $this->clearMineshaftSpace($world, $x, $y, $z);
         $this->buildMineshaftStructure($world, $x, $y, $z);
         $this->placeChest($world, $x, $y, $z);
-        $this->placeTorches($world, $x, $y, $z);
     }
 
     private function clearMineshaftSpace(World $world, int $x, int $y, int $z): void {
-        $height = 4;
-        for ($dx = -3; $dx <= 3; $dx++) {
-            for ($dz = -3; $dz <= 3; $dz++) {
+        $height = 3;
+        for ($dx = -2; $dx <= 2; $dx++) {
+            for ($dz = -2; $dz <= 2; $dz++) {
                 for ($dy = 0; $dy <= $height; $dy++) {
                     $world->setBlockAt($x + $dx, $y + $dy, $z + $dz, VanillaBlocks::AIR());
                 }
@@ -102,63 +80,31 @@ class MineshaftStructure {
     }
 
     private function buildMineshaftStructure(World $world, int $x, int $y, int $z): void {
-        $height = 4;
-        for ($dx = -4; $dx <= 4; $dx++) {
-            for ($dz = -4; $dz <= 4; $dz++) {
+        $height = 3;
+        for ($dx = -2; $dx <= 2; $dx++) {
+            for ($dz = -2; $dz <= 2; $dz++) {
                 $world->setBlockAt($x + $dx, $y - 1, $z + $dz, VanillaBlocks::STONE());
                 $world->setBlockAt($x + $dx, $y + $height + 1, $z + $dz, VanillaBlocks::STONE());
-                if (abs($dx) == 4 || abs($dz) == 4) {
+                if (abs($dx) == 2 || abs($dz) == 2) {
                     for ($dy = 0; $dy <= $height; $dy++) {
-                        $world->setBlockAt($x + $dx, $y + $dy, $z + $dz, VanillaBlocks::STONE());
+                        if (($dx + $dz + $dy) % 2 == 0) {
+                            $world->setBlockAt($x + $dx, $y + $dy, $z + $dz, VanillaBlocks::STONE());
+                        } else {
+                            $world->setBlockAt($x + $dx, $y + $dy, $z + $dz, VanillaBlocks::COBBLESTONE());
+                        }
                     }
                 }
-            }
-        }
-        $this->buildSupportPillars($world, $x, $y, $z, $height);
-    }
-
-    private function buildSupportPillars(World $world, int $x, int $y, int $z, int $height): void {
-        $corners = [[-3, -3], [3, -3], [-3, 3], [3, 3]];
-        foreach ($corners as $corner) {
-            for ($dy = 0; $dy <= $height; $dy++) {
-                $world->setBlockAt($x + $corner[0], $y + $dy, $z + $corner[1], VanillaBlocks::OAK_PLANKS());
-            }
-        }
-        for ($dx = -2; $dx <= 2; $dx += 4) {
-            for ($dy = 0; $dy <= $height; $dy++) {
-                $world->setBlockAt($x + $dx, $y + $dy, $z, VanillaBlocks::OAK_PLANKS());
-            }
-        }
-        
-        for ($dz = -2; $dz <= 2; $dz += 4) {
-            for ($dy = 0; $dy <= $height; $dy++) {
-                $world->setBlockAt($x, $y + $dy, $z + $dz, VanillaBlocks::OAK_PLANKS());
             }
         }
     }
 
     private function placeChest(World $world, int $x, int $y, int $z): void {
-        $chestX = $x;
+        $chestX = $x + 1;
         $chestY = $y;
-        $chestZ = $z + 2;
+        $chestZ = $z + 1;
         
         $world->setBlockAt($chestX, $chestY, $chestZ, VanillaBlocks::CHEST());
         $this->scheduleChestFill($world, new Position($chestX, $chestY, $chestZ, $world));
-    }
-
-    private function placeTorches(World $world, int $x, int $y, int $z): void {
-        $torchPositions = [
-            [$x - 2, $y + 2, $z - 2],
-            [$x + 2, $y + 2, $z - 2],
-            [$x - 2, $y + 2, $z + 2],
-            [$x + 2, $y + 2, $z + 2],
-            [$x, $y + 2, $z - 2],
-            [$x, $y + 2, $z + 2],
-        ];
-        
-        foreach ($torchPositions as $pos) {
-            $world->setBlockAt($pos[0], $pos[1], $pos[2], VanillaBlocks::TORCH());
-        }
     }
 
     private function scheduleChestFill(World $world, Position $chestPos): void {

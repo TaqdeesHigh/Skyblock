@@ -9,22 +9,28 @@ use pocketmine\block\VanillaBlocks;
 
 class PortalStructure {
 
-    // WILL BE ADDED WHEN I ADD THE ACTUAL SKYBLOCK HUB FEATURE!
-
     public function generate(World $world, int $x, int $y, int $z): void {
         $portalX = $x;
-        $portalZ = $z + 4;
+        $portalZ = $z + 13;
         $portalY = $y + 3;
         for ($dx = -2; $dx <= 2; $dx++) {
             for ($dz = -2; $dz <= 2; $dz++) {
-                $world->setBlockAt($portalX + $dx, $portalY, $portalZ + $dz, VanillaBlocks::STONE_BRICKS());
+                $world->setBlockAt($portalX + $dx, $portalY, $portalZ + $dz, VanillaBlocks::COBBLESTONE());
             }
         }
         $corners = [[-2, -2], [2, -2], [-2, 2], [2, 2]];
         foreach ($corners as $corner) {
             for ($dy = 1; $dy <= 3; $dy++) {
-                $world->setBlockAt($portalX + $corner[0], $portalY + $dy, $portalZ + $corner[1], VanillaBlocks::STONE_BRICKS());
+                $world->setBlockAt($portalX + $corner[0], $portalY + $dy, $portalZ + $corner[1], VanillaBlocks::COBBLESTONE());
             }
+        }
+        for ($dx = -2; $dx <= 2; $dx++) {
+            $world->setBlockAt($portalX + $dx, $portalY + 3, $portalZ - 2, VanillaBlocks::COBBLESTONE());
+            $world->setBlockAt($portalX + $dx, $portalY + 3, $portalZ + 2, VanillaBlocks::COBBLESTONE());
+        }
+        for ($dz = -1; $dz <= 1; $dz++) {
+            $world->setBlockAt($portalX - 2, $portalY + 3, $portalZ + $dz, VanillaBlocks::COBBLESTONE());
+            $world->setBlockAt($portalX + 2, $portalY + 3, $portalZ + $dz, VanillaBlocks::COBBLESTONE());
         }
     }
 }
