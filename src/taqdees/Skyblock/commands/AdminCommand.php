@@ -10,10 +10,11 @@ use pocketmine\world\Position;
 use jojoe77777\FormAPI\SimpleForm;
 use jojoe77777\FormAPI\CustomForm;
 use taqdees\Skyblock\Main;
+use taqdees\Skyblock\traits\PluginOwned;
 
 class AdminCommand {
 
-    private Main $plugin;
+    use PluginOwned;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;

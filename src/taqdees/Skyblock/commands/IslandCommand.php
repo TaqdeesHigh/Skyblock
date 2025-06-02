@@ -7,10 +7,12 @@ namespace taqdees\Skyblock\commands;
 use pocketmine\player\Player;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\managers\IslandManager;
+use taqdees\Skyblock\traits\PluginOwned;
 
 class IslandCommand {
 
-    private Main $plugin;
+    use PluginOwned;
+
     private IslandManager $islandManager;
 
     public function __construct(Main $plugin, IslandManager $islandManager) {
