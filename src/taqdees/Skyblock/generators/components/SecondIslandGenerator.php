@@ -7,116 +7,201 @@ namespace taqdees\Skyblock\generators\components;
 use pocketmine\world\World;
 use pocketmine\world\Position;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\block\tile\Chest;
+use pocketmine\inventory\Inventory;
+use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\generators\structures\PortalStructure;
 use taqdees\Skyblock\generators\structures\MinionAreaStructure;
-use taqdees\Skyblock\generators\structures\MineshaftStructure;
 
 class SecondIslandGenerator {
 
     private Main $plugin;
     private PortalStructure $portalStructure;
     private MinionAreaStructure $minionAreaStructure;
-    private MineshaftStructure $mineshaftStructure;
+    private const ISLAND_RADIUS = 9;
+    private const STONE_DEPTH = 5;
+    private const DIRT_HEIGHT = 2;
+    private const SURFACE_LEVEL = 3;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->portalStructure = new PortalStructure();
         $this->minionAreaStructure = new MinionAreaStructure();
-        $this->mineshaftStructure = new MineshaftStructure($plugin);
     }
+
     public function generate(World $world, Position $center, Player $player = null): void {
-        $secondIslandCenter = $this->generateTerrain($world, $center);
-        $this->addCobblestoneDecorations($world, $secondIslandCenter);
-        $this->generateStructures($world, $secondIslandCenter);
+        $islandCenter = new Position(
+            (int)$center->getX() + 64,
+            (int)$center->getY(),
+            (int)$center->getZ(),
+            $world
+        );
+        
+        $this->generateTerrain($world, $islandCenter);
+        $this->addNaturalDecorations($world, $islandCenter);
+        $this->generateStructures($world, $islandCenter);
+        $this->placeChest($world, $islandCenter);
+        
         if ($player !== null) {
-            $this->spawnOzzyNPC($player, $world, $secondIslandCenter);
+            $this->spawnOzzyNPC($player, $world, $islandCenter);
         }
     }
 
-    private function generateTerrain(World $world, Position $center): Position {
-        $x = (int)$center->getX() + 64;
-        $y = (int)$center->getY();
-        $z = (int)$center->getZ();
-
-        for ($dx = -12; $dx <= 12; $dx++) {
-            for ($dz = -12; $dz <= 12; $dz++) {
+    private function generateTerrain(World $world, Position $center): void {
+        $centerX = (int)$center->getX();
+        $centerY = (int)$center->getY();
+        $centerZ = (int)$center->getZ();
+        for ($dx = -self::ISLAND_RADIUS; $dx <= self::ISLAND_RADIUS; $dx++) {
+            for ($dz = -self::ISLAND_RADIUS; $dz <= self::ISLAND_RADIUS; $dz++) {
                 $distance = sqrt($dx * $dx + $dz * $dz);
                 
-                if ($distance <= 12) {
-                    $this->generateStoneLayer($world, $x + $dx, $y, $z + $dz, $distance);
-                    $this->generateDirtLayer($world, $x + $dx, $y, $z + $dz, $distance);
-                    $this->generateGrassLayer($world, $x + $dx, $y, $z + $dz, $distance);
+                if ($distance <= self::ISLAND_RADIUS) {
+                    $x = $centerX + $dx;
+                    $z = $centerZ + $dz;
+                    $this->generateStoneFoundation($world, $x, $centerY, $z, $distance);
+                    $this->generateDirtLayer($world, $x, $centerY, $z, $distance);
+                    $this->generateSurfaceLayer($world, $x, $centerY, $z, $distance);
                 }
             }
         }
-
-        return new Position($x, $y, $z, $world);
     }
 
-    private function generateStoneLayer(World $world, int $x, int $y, int $z, float $distance): void {
-        $stoneDepth = $distance <= 8 ? 6 : ($distance <= 10 ? 4 : 2);
-        for ($dy = -$stoneDepth; $dy <= 0; $dy++) {
-            if ($distance <= 11.5 - ($dy * -0.2)) {
-                $world->setBlockAt($x, $y + $dy, $z, VanillaBlocks::STONE());
-            }
+    private function generateStoneFoundation(World $world, int $x, int $baseY, int $z, float $distance): void {
+        $depth = (int)(self::STONE_DEPTH * (1 - ($distance / self::ISLAND_RADIUS) * 0.4));
+        
+        for ($dy = -$depth; $dy <= 0; $dy++) {
+            $world->setBlockAt($x, $baseY + $dy, $z, VanillaBlocks::STONE());
         }
     }
 
-    private function generateDirtLayer(World $world, int $x, int $y, int $z, float $distance): void {
-        if ($distance <= 11) {
-            $dirtHeight = $distance <= 6 ? 2 : 1;
-            for ($dy = 1; $dy <= $dirtHeight; $dy++) {
-                $world->setBlockAt($x, $y + $dy, $z, VanillaBlocks::DIRT());
-            }
+    private function generateDirtLayer(World $world, int $x, int $baseY, int $z, float $distance): void {
+        $maxHeight = (int)(self::DIRT_HEIGHT * (1 - ($distance / self::ISLAND_RADIUS) * 0.3));
+        for ($dy = 1; $dy <= $maxHeight; $dy++) {
+            $world->setBlockAt($x, $baseY + $dy, $z, VanillaBlocks::DIRT());
         }
     }
 
-    private function generateGrassLayer(World $world, int $x, int $y, int $z, float $distance): void {
-        if ($distance <= 10.5) {
-            $grassY = $y + ($distance <= 6 ? 3 : 2);
-            $world->setBlockAt($x, $grassY, $z, VanillaBlocks::GRASS());
-            
-            if ($distance > 4 && mt_rand(1, 10) == 1) {
-                $world->setBlockAt($x, $grassY + 1, $z, VanillaBlocks::TALL_GRASS());
-            }
+    private function generateSurfaceLayer(World $world, int $x, int $baseY, int $z, float $distance): void {
+        $surfaceHeight = $this->getSurfaceHeight($distance);
+        $surfaceY = $baseY + $surfaceHeight;
+        $world->setBlockAt($x, $surfaceY, $z, VanillaBlocks::GRASS());
+        if ($distance > 2 && $distance < 7 && mt_rand(1, 12) == 1) {
+            $world->setBlockAt($x, $surfaceY + 1, $z, VanillaBlocks::TALL_GRASS());
         }
     }
 
-    private function addCobblestoneDecorations(World $world, Position $center): void {
-        $x = (int)$center->getX();
-        $y = (int)$center->getY();
-        $z = (int)$center->getZ();
+    private function getSurfaceHeight(float $distance): int {
+        if ($distance <= 2.5) {
+            return self::SURFACE_LEVEL;
+        } elseif ($distance <= 5) {
+            return self::SURFACE_LEVEL - 1;
+        } else {
+            return self::SURFACE_LEVEL - 2;
+        }
+    }
 
-        for ($dx = -8; $dx <= 8; $dx++) {
-            for ($dz = -8; $dz <= 8; $dz++) {
+    private function addNaturalDecorations(World $world, Position $center): void {
+        $centerX = (int)$center->getX();
+        $centerY = (int)$center->getY();
+        $centerZ = (int)$center->getZ();
+        for ($dx = -6; $dx <= 6; $dx++) {
+            for ($dz = -6; $dz <= 6; $dz++) {
                 $distance = sqrt($dx * $dx + $dz * $dz);
-                if ($distance <= 8 && $distance > 4 && mt_rand(1, 6) == 1) {
-                    $grassY = $y + ($distance <= 6 ? 3 : 2);
-                    $world->setBlockAt($x + $dx, $grassY, $z + $dz, VanillaBlocks::COBBLESTONE());
+                
+                if ($distance <= 6 && $distance > 1.5 && mt_rand(1, 18) == 1) {
+                    $surfaceHeight = $this->getSurfaceHeight($distance);
+                    $surfaceY = $centerY + $surfaceHeight;
+                    $world->setBlockAt($centerX + $dx, $surfaceY, $centerZ + $dz, VanillaBlocks::COBBLESTONE());
                 }
             }
         }
     }
 
     private function generateStructures(World $world, Position $center): void {
-        $x = (int)$center->getX();
-        $y = (int)$center->getY();
-        $z = (int)$center->getZ();
-
-        $this->portalStructure->generate($world, $x, $y, $z);
-        $this->minionAreaStructure->generate($world, $x, $y, $z);
-        $this->mineshaftStructure->generateEntrance($world, $x, $y, $z);
-        $this->mineshaftStructure->generateUnderground($world, new Position($x, $y, $z, $world));
+        $this->portalStructure->generate($world, $center);
+        $this->minionAreaStructure->generate($world, $center);
     }
-    private function spawnOzzyNPC(Player $player, World $world, Position $secondIslandCenter): void {
+
+    private function placeChest(World $world, Position $center): void {
+        $centerX = (int)$center->getX();
+        $centerY = (int)$center->getY();
+        $centerZ = (int)$center->getZ();
+        $chestX = $centerX + 2;
+        $chestZ = $centerZ + 2;
+        $chestY = $centerY + self::SURFACE_LEVEL + 1;
+        
+        $world->setBlockAt($chestX, $chestY, $chestZ, VanillaBlocks::CHEST());
+        $this->scheduleChestFill($world, new Position($chestX, $chestY, $chestZ, $world));
+    }
+
+    private function scheduleChestFill(World $world, Position $chestPos): void {
+        $scheduler = $this->plugin->getScheduler();
+        $scheduler->scheduleDelayedTask(new class($world, $chestPos, $this) extends \pocketmine\scheduler\Task {
+            private World $world;
+            private Position $chestPos;
+            private SecondIslandGenerator $generator;
+            
+            public function __construct(World $world, Position $chestPos, SecondIslandGenerator $generator) {
+                $this->world = $world;
+                $this->chestPos = $chestPos;
+                $this->generator = $generator;
+            }
+            
+            public function onRun(): void {
+                $tile = $this->world->getTile($this->chestPos);
+                if ($tile instanceof Chest) {
+                    $inventory = $tile->getInventory();
+                    $this->generator->fillChest($inventory);
+                }
+            }
+        }, 5);
+    }
+
+    public function fillChest(Inventory $inventory): void {
+        $items = [
+            VanillaItems::WATER_BUCKET(),
+            VanillaItems::LAVA_BUCKET(),  
+            VanillaBlocks::ICE()->asItem()->setCount(4),       
+            VanillaBlocks::DIRT()->asItem()->setCount(16),    
+            VanillaBlocks::GRASS()->asItem()->setCount(20),  
+            VanillaItems::BONE_MEAL()->setCount(8),
+            VanillaBlocks::COBBLESTONE()->asItem()->setCount(32),
+            VanillaItems::BREAD()->setCount(12),   
+            VanillaItems::APPLE()->setCount(8),   
+            VanillaBlocks::OAK_SAPLING()->asItem()->setCount(6),
+            VanillaItems::WHEAT_SEEDS()->setCount(12),
+            VanillaItems::IRON_PICKAXE(),   
+            VanillaItems::IRON_AXE(),     
+            VanillaItems::IRON_SHOVEL(),  
+            VanillaItems::COOKED_MUTTON()->setCount(8), 
+            VanillaItems::STRING()->setCount(12),
+            VanillaBlocks::SAND()->asItem()->setCount(16),
+            VanillaBlocks::OAK_PLANKS()->asItem()->setCount(24),
+            VanillaItems::COAL()->setCount(16),
+            VanillaBlocks::TORCH()->asItem()->setCount(32),
+        ];
+
+        foreach ($items as $index => $item) {
+            if ($index < $inventory->getSize()) {
+                $inventory->setItem($index, $item);
+            }
+        }
+    }
+
+    private function spawnOzzyNPC(Player $player, World $world, Position $center): void {
         try {
-            $x = (int)$secondIslandCenter->getX();
-            $y = (int)$secondIslandCenter->getY();
-            $z = (int)$secondIslandCenter->getZ();
-            $grassY = $y + 3;
-            $npcPosition = new Position($x + 2, $grassY + 1, $z + 2, $world);
+            $centerX = (int)$center->getX();
+            $centerY = (int)$center->getY();
+            $centerZ = (int)$center->getZ();
+            $npcPosition = new Position(
+                $centerX - 6,
+                $centerY + self::SURFACE_LEVEL - 1,
+                $centerZ - 6,
+                $world
+            );
+            
             $npcManager = $this->plugin->getNPCManager();
             $success = $npcManager->spawnNPC($player, $npcPosition);
             
