@@ -11,7 +11,7 @@ Currently in **very early development**, this plugin aims to bring a fully-featu
 
 Here's a list of major features planned for the plugin:
 
-- [ ] Island Generator  
+- [x] Island Generator  
 - [ ] Custom Features & Systems  
 - [ ] Minions
 - [ ] Farming System  
