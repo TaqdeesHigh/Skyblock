@@ -10,15 +10,18 @@ use pocketmine\world\World;
 use pocketmine\Server;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\managers\DataManager;
+use taqdees\Skyblock\managers\PlayerStateManager;
 
 class IslandCreationService {
 
     private Main $plugin;
     private DataManager $dataManager;
+    private PlayerStateManager $playerStateManager;
 
     public function __construct(Main $plugin, DataManager $dataManager) {
         $this->plugin = $plugin;
         $this->dataManager = $dataManager;
+        $this->playerStateManager = new PlayerStateManager($plugin);
     }
 
     public function createIsland(Player $player): bool {
@@ -121,6 +124,8 @@ class IslandCreationService {
 
     private function finishIslandCreation(Player $player, World $world, Position $islandCenter, string $islandWorldName): void {
         try {
+            $this->playerStateManager->setupPlayerForIsland($player);
+            
             $islandGenerator = new \taqdees\Skyblock\generators\IslandGenerator($this->plugin);
             if (!$islandGenerator->generateIsland($world, $islandCenter, $player)) {
                 $player->sendMessage($this->plugin->getConfigValue('messages.island_creation_failed', "§cFailed to generate your island!"));

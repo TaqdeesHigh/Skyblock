@@ -7,9 +7,6 @@ namespace taqdees\Skyblock\generators\components;
 use pocketmine\world\World;
 use pocketmine\world\Position;
 use pocketmine\block\VanillaBlocks;
-use pocketmine\block\tile\Chest;
-use pocketmine\inventory\Inventory;
-use pocketmine\item\VanillaItems;
 use pocketmine\player\Player;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\generators\structures\PortalStructure;
@@ -20,6 +17,7 @@ class SecondIslandGenerator {
     private Main $plugin;
     private PortalStructure $portalStructure;
     private MinionAreaStructure $minionAreaStructure;
+    private ChestGenerator $chestGenerator;
     private const ISLAND_RADIUS = 9;
     private const STONE_DEPTH = 5;
     private const DIRT_HEIGHT = 2;
@@ -29,6 +27,7 @@ class SecondIslandGenerator {
         $this->plugin = $plugin;
         $this->portalStructure = new PortalStructure();
         $this->minionAreaStructure = new MinionAreaStructure();
+        $this->chestGenerator = new ChestGenerator($plugin);
     }
 
     public function generate(World $world, Position $center, Player $player = null): void {
@@ -42,7 +41,7 @@ class SecondIslandGenerator {
         $this->generateTerrain($world, $islandCenter);
         $this->addNaturalDecorations($world, $islandCenter);
         $this->generateStructures($world, $islandCenter);
-        $this->placeChest($world, $islandCenter);
+        $this->chestGenerator->placeChest($world, $islandCenter);
         
         if ($player !== null) {
             $this->spawnOzzyNPC($player, $world, $islandCenter);
@@ -122,72 +121,6 @@ class SecondIslandGenerator {
     private function generateStructures(World $world, Position $center): void {
         $this->portalStructure->generate($world, $center);
         $this->minionAreaStructure->generate($world, $center);
-    }
-
-    private function placeChest(World $world, Position $center): void {
-        $centerX = (int)$center->getX();
-        $centerY = (int)$center->getY();
-        $centerZ = (int)$center->getZ();
-        $chestX = $centerX + 2;
-        $chestZ = $centerZ + 2;
-        $chestY = $centerY + self::SURFACE_LEVEL + 1;
-        
-        $world->setBlockAt($chestX, $chestY, $chestZ, VanillaBlocks::CHEST());
-        $this->scheduleChestFill($world, new Position($chestX, $chestY, $chestZ, $world));
-    }
-
-    private function scheduleChestFill(World $world, Position $chestPos): void {
-        $scheduler = $this->plugin->getScheduler();
-        $scheduler->scheduleDelayedTask(new class($world, $chestPos, $this) extends \pocketmine\scheduler\Task {
-            private World $world;
-            private Position $chestPos;
-            private SecondIslandGenerator $generator;
-            
-            public function __construct(World $world, Position $chestPos, SecondIslandGenerator $generator) {
-                $this->world = $world;
-                $this->chestPos = $chestPos;
-                $this->generator = $generator;
-            }
-            
-            public function onRun(): void {
-                $tile = $this->world->getTile($this->chestPos);
-                if ($tile instanceof Chest) {
-                    $inventory = $tile->getInventory();
-                    $this->generator->fillChest($inventory);
-                }
-            }
-        }, 5);
-    }
-
-    public function fillChest(Inventory $inventory): void {
-        $items = [
-            VanillaItems::WATER_BUCKET(),
-            VanillaItems::LAVA_BUCKET(),  
-            VanillaBlocks::ICE()->asItem()->setCount(4),       
-            VanillaBlocks::DIRT()->asItem()->setCount(16),    
-            VanillaBlocks::GRASS()->asItem()->setCount(20),  
-            VanillaItems::BONE_MEAL()->setCount(8),
-            VanillaBlocks::COBBLESTONE()->asItem()->setCount(32),
-            VanillaItems::BREAD()->setCount(12),   
-            VanillaItems::APPLE()->setCount(8),   
-            VanillaBlocks::OAK_SAPLING()->asItem()->setCount(6),
-            VanillaItems::WHEAT_SEEDS()->setCount(12),
-            VanillaItems::IRON_PICKAXE(),   
-            VanillaItems::IRON_AXE(),     
-            VanillaItems::IRON_SHOVEL(),  
-            VanillaItems::COOKED_MUTTON()->setCount(8), 
-            VanillaItems::STRING()->setCount(12),
-            VanillaBlocks::SAND()->asItem()->setCount(16),
-            VanillaBlocks::OAK_PLANKS()->asItem()->setCount(24),
-            VanillaItems::COAL()->setCount(16),
-            VanillaBlocks::TORCH()->asItem()->setCount(32),
-        ];
-
-        foreach ($items as $index => $item) {
-            if ($index < $inventory->getSize()) {
-                $inventory->setItem($index, $item);
-            }
-        }
     }
 
     private function spawnOzzyNPC(Player $player, World $world, Position $center): void {
