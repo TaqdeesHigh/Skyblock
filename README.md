@@ -13,9 +13,9 @@ Here's a list of major features planned for the plugin:
 
 - [ ] Island Generator  
 - [ ] Custom Features & Systems  
-- [ ] Slav... uhm uhm I mean Minions
+- [ ] Minions
 - [ ] Farming System  
-- [ ] Bazaar & Economy System  
+- [ ] Bazaar & Economy System 
 - [ ] Scoreboard Integration  
 
 ---
