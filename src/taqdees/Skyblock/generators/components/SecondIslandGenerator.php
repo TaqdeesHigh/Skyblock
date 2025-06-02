@@ -7,6 +7,7 @@ namespace taqdees\Skyblock\generators\components;
 use pocketmine\world\World;
 use pocketmine\world\Position;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\player\Player;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\generators\structures\PortalStructure;
 use taqdees\Skyblock\generators\structures\MinionAreaStructure;
@@ -25,11 +26,13 @@ class SecondIslandGenerator {
         $this->minionAreaStructure = new MinionAreaStructure();
         $this->mineshaftStructure = new MineshaftStructure($plugin);
     }
-
-    public function generate(World $world, Position $center): void {
+    public function generate(World $world, Position $center, Player $player = null): void {
         $secondIslandCenter = $this->generateTerrain($world, $center);
         $this->addCobblestoneDecorations($world, $secondIslandCenter);
         $this->generateStructures($world, $secondIslandCenter);
+        if ($player !== null) {
+            $this->spawnOzzyNPC($player, $world, $secondIslandCenter);
+        }
     }
 
     private function generateTerrain(World $world, Position $center): Position {
@@ -106,5 +109,19 @@ class SecondIslandGenerator {
         $this->minionAreaStructure->generate($world, $x, $y, $z);
         $this->mineshaftStructure->generateEntrance($world, $x, $y, $z);
         $this->mineshaftStructure->generateUnderground($world, new Position($x, $y, $z, $world));
+    }
+    private function spawnOzzyNPC(Player $player, World $world, Position $secondIslandCenter): void {
+        try {
+            $x = (int)$secondIslandCenter->getX();
+            $y = (int)$secondIslandCenter->getY();
+            $z = (int)$secondIslandCenter->getZ();
+            $grassY = $y + 3;
+            $npcPosition = new Position($x + 2, $grassY + 1, $z + 2, $world);
+            $npcManager = $this->plugin->getNPCManager();
+            $success = $npcManager->spawnNPC($player, $npcPosition);
+            
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Failed to spawn NPC on second island for " . $player->getName() . ": " . $e->getMessage());
+        }
     }
 }

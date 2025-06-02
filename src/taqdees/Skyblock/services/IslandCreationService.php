@@ -73,21 +73,46 @@ class IslandCreationService {
     private function generateAndWaitForChunks(World $world, Position $center, callable $callback): void {
         $chunkX = $center->getFloorX() >> 4;
         $chunkZ = $center->getFloorZ() >> 4;
-        for ($x = $chunkX - 1; $x <= $chunkX + 1; $x++) {
-            for ($z = $chunkZ - 1; $z <= $chunkZ + 1; $z++) {
+        
+        for ($x = $chunkX - 5; $x <= $chunkX + 5; $x++) {
+            for ($z = $chunkZ - 5; $z <= $chunkZ + 5; $z++) {
                 $world->loadChunk($x, $z);
             }
         }
-        $this->plugin->getScheduler()->scheduleDelayedTask(
-            new class($callback) extends \pocketmine\scheduler\Task {
+        $this->plugin->getScheduler()->scheduleRepeatingTask(
+            new class($world, $center, $callback, $this->plugin) extends \pocketmine\scheduler\Task {
+                private $world;
+                private $center;
                 private $callback;
+                private $plugin;
+                private $attempts = 0;
                 
-                public function __construct(callable $callback) {
+                public function __construct(World $world, Position $center, callable $callback, Main $plugin) {
+                    $this->world = $world;
+                    $this->center = $center;
                     $this->callback = $callback;
+                    $this->plugin = $plugin;
                 }
                 
                 public function onRun(): void {
-                    ($this->callback)();
+                    $this->attempts++;
+                    $chunkX = $this->center->getFloorX() >> 4;
+                    $chunkZ = $this->center->getFloorZ() >> 4;
+                    
+                    $chunksReady = true;
+                    for ($x = $chunkX - 2; $x <= $chunkX + 6; $x++) {
+                        for ($z = $chunkZ - 2; $z <= $chunkZ + 2; $z++) {
+                            if (!$this->world->isChunkLoaded($x, $z)) {
+                                $chunksReady = false;
+                                break 2;
+                            }
+                        }
+                    }
+                    
+                    if ($chunksReady || $this->attempts > 20) {
+                        ($this->callback)();
+                        $this->getHandler()->cancel();
+                    }
                 }
             },
             10
@@ -97,10 +122,11 @@ class IslandCreationService {
     private function finishIslandCreation(Player $player, World $world, Position $islandCenter, string $islandWorldName): void {
         try {
             $islandGenerator = new \taqdees\Skyblock\generators\IslandGenerator($this->plugin);
-            if (!$islandGenerator->generateIsland($world, $islandCenter)) {
+            if (!$islandGenerator->generateIsland($world, $islandCenter, $player)) {
                 $player->sendMessage($this->plugin->getConfigValue('messages.island_creation_failed', "§cFailed to generate your island!"));
                 return;
             }
+            
             $islandData = $this->dataManager->createIsland($player->getName(), $islandCenter, $islandWorldName);
             $spawnHeight = $this->plugin->getConfigValue('island.generation.spawn_height', 64);
             $spawnPosition = new Position(0, $spawnHeight + 2, 0, $world);
@@ -109,6 +135,7 @@ class IslandCreationService {
             $player->sendMessage($this->plugin->getConfigValue('messages.island_created', "§aIsland created successfully! Welcome to your personal island!"));
             $player->sendMessage("§7You now have your own private island world!");
             $player->sendMessage("§7Use /is home to return here anytime.");
+            $player->sendMessage("§7Ozzy has been spawned on your second island!");
             
         } catch (\Exception $e) {
             $this->plugin->getLogger()->error("Failed to finish island creation for " . $player->getName() . ": " . $e->getMessage());
