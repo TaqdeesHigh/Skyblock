@@ -40,6 +40,7 @@ class IslandCommand {
                 
             case "sethome":
                 return $this->islandManager->setHome($player);
+                
             case "invite":
                 if (!isset($args[1])) {
                     $player->sendMessage("§cUsage: /island invite <player>");
@@ -53,8 +54,16 @@ class IslandCommand {
                     return true;
                 }
                 return $this->islandManager->kickMember($player, $args[1]);
+                
             case "leave":
                 return $this->islandManager->leaveIsland($player);
+                
+            case "visit":
+                if (!isset($args[1])) {
+                    $player->sendMessage("§cUsage: /island visit <player>");
+                    return true;
+                }
+                return $this->islandManager->visitMemberIsland($player, $args[1]);
                 
             case "members":
                 $members = $this->islandManager->getMembers($player);
@@ -81,6 +90,7 @@ class IslandCommand {
         $player->sendMessage("§7/island invite <player> §f- Invite a player");
         $player->sendMessage("§7/island kick <player> §f- Kick a player");
         $player->sendMessage("§7/island leave §f- Leave current island");
+        $player->sendMessage("§7/island visit <player> §f- Visit member island");
         $player->sendMessage("§7/island members §f- List island members");
         $player->sendMessage("§7/island delete §f- Delete your island");
         $player->sendMessage("§7You can also use §b/is §7as a shortcut!");

@@ -138,6 +138,24 @@ class DataManager {
         );
     }
 
+    public function setIslandHome(string $playerName, Position $position): bool {
+        $islands = $this->islandsConfig->get("islands", []);
+        if (!isset($islands[$playerName])) {
+            return false;
+        }
+
+        $islands[$playerName]["home"] = [
+            "x" => $position->getX(),
+            "y" => $position->getY(),
+            "z" => $position->getZ(),
+            "world" => $position->getWorld()->getFolderName()
+        ];
+
+        $this->islandsConfig->set("islands", $islands);
+        $this->islandsConfig->save();
+        return true;
+    }
+
     private function getNextIslandId(): int {
         $id = $this->islandsConfig->get("next_island_id", 1);
         return is_int($id) ? $id : 1;

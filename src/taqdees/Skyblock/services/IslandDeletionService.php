@@ -25,7 +25,6 @@ class IslandDeletionService {
             $player->sendMessage("§cYou don't have an island to delete!");
             return false;
         }
-
         $worldName = "island_" . strtolower($player->getName());
         $server = Server::getInstance();
         $worldManager = $server->getWorldManager();
@@ -33,8 +32,10 @@ class IslandDeletionService {
         if ($world !== null) {
             foreach ($world->getPlayers() as $worldPlayer) {
                 $spawnWorld = $server->getWorldManager()->getDefaultWorld();
-                $worldPlayer->teleport($spawnWorld->getSpawnLocation());
-                $worldPlayer->sendMessage("§7You have been teleported to spawn as the island was deleted.");
+                if ($spawnWorld !== null) {
+                    $worldPlayer->teleport($spawnWorld->getSpawnLocation());
+                    $worldPlayer->sendMessage("§7You have been teleported to spawn as the island was deleted.");
+                }
             }
             $worldManager->unloadWorld($world);
         }
@@ -45,6 +46,11 @@ class IslandDeletionService {
         }
 
         $player->sendMessage("§aYour island has been deleted successfully!");
+        $spawnWorld = $server->getWorldManager()->getDefaultWorld();
+        if ($spawnWorld !== null) {
+            $player->teleport($spawnWorld->getSpawnLocation());
+        }
+        
         return true;
     }
 

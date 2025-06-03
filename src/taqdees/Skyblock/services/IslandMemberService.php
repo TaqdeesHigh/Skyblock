@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace taqdees\Skyblock\services;
 
 use pocketmine\player\Player;
+use pocketmine\world\Position;
 use pocketmine\Server;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\managers\DataManager;
@@ -81,7 +82,8 @@ class IslandMemberService {
         $kickedPlayer = Server::getInstance()->getPlayerExact($memberName);
         if ($kickedPlayer !== null) {
             $kickedPlayer->sendMessage("§cYou have been kicked from " . $player->getName() . "'s island!");
-            if ($kickedPlayer->getWorld()->getFolderName() === $islandData["world_name"]) {
+            $worldName = "island_" . strtolower($player->getName());
+            if ($kickedPlayer->getWorld()->getFolderName() === $worldName) {
                 $this->teleportToSpawn($kickedPlayer);
             }
         }
@@ -167,16 +169,23 @@ class IslandMemberService {
             return false;
         }
 
-        $position = new Position(
-            $islandData["position"]["x"],
-            $islandData["position"]["y"] + 2,
-            $islandData["position"]["z"],
-            $world
-        );
+        $homePos = $islandData["home"] ?? null;
+        if ($homePos !== null) {
+            $position = new Position($homePos["x"], $homePos["y"], $homePos["z"], $world);
+        } else {
+            $position = new Position(
+                $islandData["position"]["x"],
+                $islandData["position"]["y"] + 2,
+                $islandData["position"]["z"],
+                $world
+            );
+        }
 
         $player->teleport($position);
+        
+        $player->setGamemode(\pocketmine\player\GameMode::SURVIVAL());
+        
         $player->sendMessage("§aWelcome to {$ownerName}'s island!");
         return true;
     }
-
 }

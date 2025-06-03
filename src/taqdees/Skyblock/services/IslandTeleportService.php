@@ -26,10 +26,10 @@ class IslandTeleportService {
             $player->sendMessage("§cYou don't have an island! Use /is create to make one.");
             return false;
         }
-
-        $worldName = $islandData["world"];
+        $worldName = "island_" . strtolower($player->getName());
         $server = Server::getInstance();
         $worldManager = $server->getWorldManager();
+        
         if (!$worldManager->isWorldLoaded($worldName)) {
             if (!$worldManager->loadWorld($worldName)) {
                 $player->sendMessage("§cFailed to load your island world!");
@@ -42,6 +42,7 @@ class IslandTeleportService {
             $player->sendMessage("§cYour island world is not accessible!");
             return false;
         }
+        
         $homePos = $islandData["home"] ?? null;
         if ($homePos !== null) {
             $position = new Position($homePos["x"], $homePos["y"], $homePos["z"], $world);
@@ -55,6 +56,9 @@ class IslandTeleportService {
         }
 
         $player->teleport($position);
+        
+        $player->setGamemode(\pocketmine\player\GameMode::SURVIVAL());
+        
         $player->sendMessage("§aWelcome back to your island!");
         return true;
     }

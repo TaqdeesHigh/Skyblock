@@ -131,7 +131,6 @@ class IslandCreationService {
                 $player->sendMessage($this->plugin->getConfigValue('messages.island_creation_failed', "§cFailed to generate your island!"));
                 return;
             }
-            
             $islandData = $this->dataManager->createIsland($player->getName(), $islandCenter, $islandWorldName);
             $spawnHeight = $this->plugin->getConfigValue('island.generation.spawn_height', 64);
             $spawnPosition = new Position(0, $spawnHeight + 2, 0, $world);
