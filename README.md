@@ -35,6 +35,11 @@ To use this plugin on a public or monetized Minecraft server, please contact me 
 
 ---
 
+## Libraries Using:
+
+- [FormAPI](https://github.com/jojoe77777/FormAPI)
+- [InvMenu](https://github.com/Muqsit/InvMenu)
+
 ## Stay Updated
 
 This plugin is actively being worked on. Watch the repository to stay up-to-date with progress and releases.
