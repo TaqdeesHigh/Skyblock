@@ -6,6 +6,8 @@ namespace taqdees\Skyblock\listeners;
 
 use pocketmine\event\Listener;
 use pocketmine\event\player\PlayerInteractEvent;
+use pocketmine\event\player\PlayerQuitEvent;
+use pocketmine\event\player\PlayerLoginEvent;
 use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntitySpawnEvent;
@@ -29,6 +31,7 @@ class EventListener implements Listener {
         $player = $event->getPlayer();
         $item = $event->getItem();
         $action = $event->getAction();
+        
         if ($this->plugin->isInEditMode($player->getName()) && 
             $item->getTypeId() === VanillaItems::COMPASS()->getTypeId()) {
             
@@ -40,6 +43,7 @@ class EventListener implements Listener {
                 return;
             }
         }
+        
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
 
@@ -142,5 +146,14 @@ class EventListener implements Listener {
                 $player->sendMessage("§cYou can only break blocks on your own island!");
             }
         }
+    }
+    public function onPlayerQuit(PlayerQuitEvent $event): void {
+        $playerName = $event->getPlayer()->getName();
+        $this->plugin->getNPCManager()->cleanupPlayer($playerName);
+        $this->plugin->setEditMode($playerName, false);
+    }
+    public function onPlayerLogin(PlayerLoginEvent $event): void {
+        $playerName = $event->getPlayer()->getName();
+        $this->plugin->getNPCManager()->cleanupPlayer($playerName);
     }
 }

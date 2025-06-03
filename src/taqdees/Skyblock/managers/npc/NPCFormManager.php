@@ -20,6 +20,10 @@ class NPCFormManager {
     private Main $plugin;
     private NPCSpawnManager $spawnManager;
     private IslandFormManager $islandFormManager;
+    /** @var array<string, bool> */
+    private array $processingClicks = [];
+    /** @var array<string, int> */
+    private array $lastClickTime = [];
 
     public function __construct(Main $plugin, NPCSpawnManager $spawnManager) {
         $this->plugin = $plugin;
@@ -28,7 +32,25 @@ class NPCFormManager {
     }
 
     public function openNPCMenu(Player $player, OzzyNPC $npc): void {
+        $playerName = $player->getName();
+        $currentTime = time();
+        $introManager = $this->plugin->getNPCManager()->getIntroductionManager();
+        if ($introManager->isPlayingIntroduction($playerName)) {
+            return;
+        }
+        if (isset($this->lastClickTime[$playerName]) && 
+            ($currentTime - $this->lastClickTime[$playerName]) < 2) {
+            return;
+        }
+        
+        $this->lastClickTime[$playerName] = $currentTime;
+        if (isset($this->processingClicks[$playerName])) {
+            unset($this->processingClicks[$playerName]);
+        }
+        
+
         $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST);
+
         $menu->setName("§6" . $npc->getDisplayName() . "'s Menu");
         
         $inventory = $menu->getInventory();
@@ -39,6 +61,7 @@ class NPCFormManager {
             "§7Click to change!"
         ]);
         $inventory->setItem(11, $nameTag);
+        
         $enderPearl = VanillaItems::ENDER_PEARL();
         $enderPearl->setCustomName("§bChange " . $npc->getDisplayName() . "'s Location");
         $enderPearl->setLore([
@@ -46,6 +69,7 @@ class NPCFormManager {
             "§7Click to get location egg!"
         ]);
         $inventory->setItem(12, $enderPearl);
+        
         $grass = VanillaBlocks::GRASS()->asItem();
         $grass->setCustomName("§aIsland Settings");
         $grass->setLore([
@@ -54,6 +78,7 @@ class NPCFormManager {
             "§7Click to open island menu!"
         ]);
         $inventory->setItem(13, $grass);
+        
         $compass = VanillaItems::COMPASS();
         $compass->setCustomName("§dGo To Skyblock Hub");
         $compass->setLore([
@@ -61,6 +86,7 @@ class NPCFormManager {
             "§7Click to teleport!"
         ]);
         $inventory->setItem(14, $compass);
+        
         $barrier = VanillaBlocks::BARRIER()->asItem();
         $barrier->setCustomName("§cClose Menu");
         $barrier->setLore([
@@ -70,26 +96,61 @@ class NPCFormManager {
 
         $menu->setListener(function(InvMenuTransaction $transaction) use ($npc): InvMenuTransactionResult {
             $player = $transaction->getPlayer();
-            $itemClicked = $transaction->getItemClicked();
+            $playerName = $player->getName();
             $slot = $transaction->getAction()->getSlot();
+            
+            if (isset($this->processingClicks[$playerName])) {
+                return $transaction->discard();
+            }
+            
+            $this->processingClicks[$playerName] = true;
+            $this->plugin->getScheduler()->scheduleDelayedTask(
+                new \pocketmine\scheduler\ClosureTask(function() use ($playerName): void {
+                    if (isset($this->processingClicks[$playerName])) {
+                        unset($this->processingClicks[$playerName]);
+                    }
+                }), 60
+            );
             
             switch ($slot) {
                 case 11:
-                    $this->openNameChangeForm($player, $npc);
+                    $player->removeCurrentWindow();
+                    $this->plugin->getScheduler()->scheduleDelayedTask(
+                        new \pocketmine\scheduler\ClosureTask(function() use ($player, $npc, $playerName): void {
+                            if ($player->isOnline()) {
+                                $this->openNameChangeForm($player, $npc);
+                            }
+                            unset($this->processingClicks[$playerName]);
+                        }), 5
+                    );
                     break;
                 case 12:
                     $this->spawnManager->startLocationChangeMode($player, $npc);
                     $player->removeCurrentWindow();
+                    unset($this->processingClicks[$playerName]);
                     break;
                 case 13:
-                    $this->islandFormManager->openIslandSettingsMenu($player);
+                    $player->removeCurrentWindow();
+                    $this->plugin->getScheduler()->scheduleDelayedTask(
+                        new \pocketmine\scheduler\ClosureTask(function() use ($player, $playerName): void {
+                            if ($player->isOnline()) {
+                                $this->islandFormManager->openIslandSettingsMenu($player);
+                            }
+                            unset($this->processingClicks[$playerName]);
+                        }), 5
+                    );
                     break;
                 case 14:
                     $this->teleportToHub($player);
                     $player->removeCurrentWindow();
+                    unset($this->processingClicks[$playerName]);
                     break;
                 case 15:
                     $player->removeCurrentWindow();
+                    unset($this->processingClicks[$playerName]);
+                    break;
+                default:
+                    unset($this->processingClicks[$playerName]);
                     break;
             }
             
@@ -100,6 +161,10 @@ class NPCFormManager {
     }
 
     private function openNameChangeForm(Player $player, OzzyNPC $npc): void {
+        if (!$player->isOnline()) {
+            return;
+        }
+        
         $form = new CustomForm(function (Player $player, ?array $data) use ($npc) {
             if ($data === null) return;
             
@@ -132,5 +197,10 @@ class NPCFormManager {
         } else {
             $player->sendMessage("§cHub world not found!");
         }
+    }
+    
+    public function cleanupPlayer(string $playerName): void {
+        unset($this->processingClicks[$playerName]);
+        unset($this->lastClickTime[$playerName]);
     }
 }

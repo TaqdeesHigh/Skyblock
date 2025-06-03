@@ -47,12 +47,17 @@ class NPCManager {
     }
 
     public function openNPCMenu(Player $player, OzzyNPC $npc): void {
+        $playerName = $player->getName();
+        if ($this->introductionManager->isPlayingIntroduction($playerName)) {
+            return;
+        }
+        
         $this->introductionManager->showIntroduction($player, $npc, function() use ($player, $npc): void {
             $this->plugin->getScheduler()->scheduleDelayedTask(new \pocketmine\scheduler\ClosureTask(function() use ($player, $npc): void {
                 if ($player->isOnline()) {
                     $this->formManager->openNPCMenu($player, $npc);
                 }
-            }), 5);
+            }), 10);
         });
     }
 
@@ -87,4 +92,11 @@ class NPCManager {
     public function getIntroductionManager(): NPCIntroductionManager {
         return $this->introductionManager;
     }
+
+    public function cleanupPlayer(string $playerName): void {
+        $this->formManager->cleanupPlayer($playerName);
+        $this->introductionManager->stopIntroduction($playerName);
+        $this->spawnManager->cleanupPlayer($playerName);
+    }
+
 }

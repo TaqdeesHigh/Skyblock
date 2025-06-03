@@ -153,4 +153,8 @@ class NPCSpawnManager {
             $this->npcs[$playerName] = $npc;
         }
     }
+    public function cleanupPlayer(string $playerName): void {
+        unset($this->placingMode[$playerName]);
+    }
+
 }

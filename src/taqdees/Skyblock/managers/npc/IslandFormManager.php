@@ -17,6 +17,8 @@ use taqdees\Skyblock\Main;
 class IslandFormManager {
 
     private Main $plugin;
+    /** @var array<string, bool> */
+    private array $processingClicks = [];
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -59,16 +61,34 @@ class IslandFormManager {
 
         $menu->setListener(function(InvMenuTransaction $transaction): InvMenuTransactionResult {
             $player = $transaction->getPlayer();
+            $playerName = $player->getName();
             $slot = $transaction->getAction()->getSlot();
+            if (isset($this->processingClicks[$playerName])) {
+                return $transaction->discard();
+            }
+            
+            $this->processingClicks[$playerName] = true;
             
             $islandManager = $this->plugin->getIslandManager();
             
             switch ($slot) {
                 case 10:
-                    $this->openInviteForm($player);
+                    $player->removeCurrentWindow();
+                    $this->plugin->getScheduler()->scheduleDelayedTask(
+                        new \pocketmine\scheduler\ClosureTask(function() use ($player, $playerName): void {
+                            $this->openInviteForm($player);
+                            unset($this->processingClicks[$playerName]);
+                        }), 5
+                    );
                     break;
                 case 12:
-                    $this->openKickForm($player);
+                    $player->removeCurrentWindow();
+                    $this->plugin->getScheduler()->scheduleDelayedTask(
+                        new \pocketmine\scheduler\ClosureTask(function() use ($player, $playerName): void {
+                            $this->openKickForm($player);
+                            unset($this->processingClicks[$playerName]);
+                        }), 5
+                    );
                     break;
                 case 14:
                     $members = $islandManager->getMembers($player);
@@ -76,10 +96,15 @@ class IslandFormManager {
                         $player->sendMessage("§aIsland Members: §7" . implode(", ", $members));
                     }
                     $player->removeCurrentWindow();
+                    unset($this->processingClicks[$playerName]);
                     break;
                 case 16:
                     $islandManager->deleteIsland($player);
                     $player->removeCurrentWindow();
+                    unset($this->processingClicks[$playerName]);
+                    break;
+                default:
+                    unset($this->processingClicks[$playerName]);
                     break;
             }
             
@@ -90,6 +115,10 @@ class IslandFormManager {
     }
 
     private function openInviteForm(Player $player): void {
+        if (!$player->isOnline()) {
+            return;
+        }
+        
         $form = new CustomForm(function (Player $player, ?array $data) {
             if ($data === null) return;
             
@@ -109,6 +138,10 @@ class IslandFormManager {
     }
 
     private function openKickForm(Player $player): void {
+        if (!$player->isOnline()) {
+            return;
+        }
+        
         $form = new CustomForm(function (Player $player, ?array $data) {
             if ($data === null) return;
             
