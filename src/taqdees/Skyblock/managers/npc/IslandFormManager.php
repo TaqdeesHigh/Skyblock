@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace taqdees\Skyblock\managers\npc;
 
 use pocketmine\player\Player;
-use jojoe77777\FormAPI\SimpleForm;
+use pocketmine\item\VanillaItems;
+use pocketmine\block\VanillaBlocks;
+use muqsit\invmenu\InvMenu;
+use muqsit\invmenu\type\InvMenuTypeIds;
+use muqsit\invmenu\transaction\InvMenuTransaction;
+use muqsit\invmenu\transaction\InvMenuTransactionResult;
 use jojoe77777\FormAPI\CustomForm;
 use taqdees\Skyblock\Main;
 
@@ -18,39 +23,70 @@ class IslandFormManager {
     }
 
     public function openIslandSettingsMenu(Player $player): void {
-        $form = new SimpleForm(function (Player $player, ?int $data) {
-            if ($data === null) return;
+        $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST);
+        $menu->setName("§aIsland Settings");
+        
+        $inventory = $menu->getInventory();
+        $emerald = VanillaItems::EMERALD();
+        $emerald->setCustomName("§eInvite Player");
+        $emerald->setLore([
+            "§7Add someone to your island",
+            "§7Click to invite!"
+        ]);
+        $inventory->setItem(10, $emerald);
+        $redstone = VanillaItems::REDSTONE_DUST();
+        $redstone->setCustomName("§cKick Player");
+        $redstone->setLore([
+            "§7Remove someone from your island",
+            "§7Click to kick!"
+        ]);
+        $inventory->setItem(12, $redstone);
+        $book = VanillaItems::BOOK();
+        $book->setCustomName("§bView Members");
+        $book->setLore([
+            "§7See who's on your island",
+            "§7Click to view!"
+        ]);
+        $inventory->setItem(14, $book);
+        $tnt = VanillaBlocks::TNT()->asItem();
+        $tnt->setCustomName("§4Reset Island");
+        $tnt->setLore([
+            "§7Delete and start over",
+            "§c§lWARNING: This cannot be undone!",
+            "§7Click to reset!"
+        ]);
+        $inventory->setItem(16, $tnt);
+
+        $menu->setListener(function(InvMenuTransaction $transaction): InvMenuTransactionResult {
+            $player = $transaction->getPlayer();
+            $slot = $transaction->getAction()->getSlot();
             
             $islandManager = $this->plugin->getIslandManager();
             
-            switch ($data) {
-                case 0:
+            switch ($slot) {
+                case 10:
                     $this->openInviteForm($player);
                     break;
-                case 1:
+                case 12:
                     $this->openKickForm($player);
                     break;
-                case 2:
+                case 14:
                     $members = $islandManager->getMembers($player);
                     if ($members !== null) {
                         $player->sendMessage("§aIsland Members: §7" . implode(", ", $members));
                     }
+                    $player->removeCurrentWindow();
                     break;
-                case 3:
+                case 16:
                     $islandManager->deleteIsland($player);
+                    $player->removeCurrentWindow();
                     break;
             }
+            
+            return $transaction->discard();
         });
 
-        $form->setTitle("§aIsland Settings");
-        $form->setContent("§7Manage your island:");
-        
-        $form->addButton("§eInvite Player\n§7Add someone to your island");
-        $form->addButton("§cKick Player\n§7Remove someone from your island");
-        $form->addButton("§bView Members\n§7See who's on your island");
-        $form->addButton("§4Reset Island\n§7Delete and start over");
-
-        $player->sendForm($form);
+        $menu->send($player);
     }
 
     private function openInviteForm(Player $player): void {

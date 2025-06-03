@@ -12,6 +12,7 @@ use taqdees\Skyblock\entities\OzzyNPC;
 use taqdees\Skyblock\managers\npc\NPCFormManager;
 use taqdees\Skyblock\managers\npc\NPCSpawnManager;
 use taqdees\Skyblock\managers\npc\NPCDataManager;
+use taqdees\Skyblock\managers\npc\NPCIntroductionManager;
 
 class NPCManager {
 
@@ -19,6 +20,7 @@ class NPCManager {
     private NPCFormManager $formManager;
     private NPCSpawnManager $spawnManager;
     private NPCDataManager $dataManager;
+    private NPCIntroductionManager $introductionManager;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
@@ -29,6 +31,7 @@ class NPCManager {
         $this->dataManager = new NPCDataManager($this->plugin);
         $this->spawnManager = new NPCSpawnManager($this->plugin, $this->dataManager);
         $this->formManager = new NPCFormManager($this->plugin, $this->spawnManager);
+        $this->introductionManager = new NPCIntroductionManager($this->plugin);
     }
 
     public function createOzzyEgg(): \pocketmine\item\Item {
@@ -44,7 +47,13 @@ class NPCManager {
     }
 
     public function openNPCMenu(Player $player, OzzyNPC $npc): void {
-        $this->formManager->openNPCMenu($player, $npc);
+        $this->introductionManager->showIntroduction($player, $npc, function() use ($player, $npc): void {
+            $this->plugin->getScheduler()->scheduleDelayedTask(new \pocketmine\scheduler\ClosureTask(function() use ($player, $npc): void {
+                if ($player->isOnline()) {
+                    $this->formManager->openNPCMenu($player, $npc);
+                }
+            }), 5);
+        });
     }
 
     public function handleLocationEggUse(Player $player, Position $position): bool {
@@ -59,6 +68,10 @@ class NPCManager {
         return $this->spawnManager->getNPC($playerName);
     }
 
+    public function resetIntroduction(string $playerName): void {
+        $this->introductionManager->resetIntroduction($playerName);
+    }
+
     public function getFormManager(): NPCFormManager {
         return $this->formManager;
     }
@@ -69,5 +82,9 @@ class NPCManager {
 
     public function getDataManager(): NPCDataManager {
         return $this->dataManager;
+    }
+
+    public function getIntroductionManager(): NPCIntroductionManager {
+        return $this->introductionManager;
     }
 }

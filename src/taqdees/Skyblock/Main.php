@@ -14,6 +14,7 @@ use pocketmine\entity\EntityDataHelper;
 use pocketmine\entity\EntityFactory;
 use pocketmine\nbt\tag\CompoundTag;
 use pocketmine\world\World;
+use muqsit\invmenu\InvMenuHandler;
 use taqdees\Skyblock\commands\IslandCommand;
 use taqdees\Skyblock\commands\AdminCommand;
 use taqdees\Skyblock\listeners\EventListener;
@@ -35,6 +36,11 @@ class Main extends PluginBase {
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
+        
+        if (!InvMenuHandler::isRegistered()) {
+            InvMenuHandler::register($this);
+        }
+        
         $this->registerEntities();
         $this->registerGenerators();
         $this->initializeManagers();

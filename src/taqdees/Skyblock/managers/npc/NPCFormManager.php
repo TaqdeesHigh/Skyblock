@@ -5,7 +5,12 @@ declare(strict_types=1);
 namespace taqdees\Skyblock\managers\npc;
 
 use pocketmine\player\Player;
-use jojoe77777\FormAPI\SimpleForm;
+use pocketmine\item\VanillaItems;
+use pocketmine\block\VanillaBlocks;
+use muqsit\invmenu\InvMenu;
+use muqsit\invmenu\type\InvMenuTypeIds;
+use muqsit\invmenu\transaction\InvMenuTransaction;
+use muqsit\invmenu\transaction\InvMenuTransactionResult;
 use jojoe77777\FormAPI\CustomForm;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\entities\OzzyNPC;
@@ -23,35 +28,75 @@ class NPCFormManager {
     }
 
     public function openNPCMenu(Player $player, OzzyNPC $npc): void {
-        $form = new SimpleForm(function (Player $player, ?int $data) use ($npc) {
-            if ($data === null) return;
+        $menu = InvMenu::create(InvMenuTypeIds::TYPE_CHEST);
+        $menu->setName("§6" . $npc->getDisplayName() . "'s Menu");
+        
+        $inventory = $menu->getInventory();
+        $nameTag = VanillaItems::NAME_TAG();
+        $nameTag->setCustomName("§eChange " . $npc->getDisplayName() . "'s Name");
+        $nameTag->setLore([
+            "§7Customize your NPC's name",
+            "§7Click to change!"
+        ]);
+        $inventory->setItem(11, $nameTag);
+        $enderPearl = VanillaItems::ENDER_PEARL();
+        $enderPearl->setCustomName("§bChange " . $npc->getDisplayName() . "'s Location");
+        $enderPearl->setLore([
+            "§7Move your NPC to a new position",
+            "§7Click to get location egg!"
+        ]);
+        $inventory->setItem(12, $enderPearl);
+        $grass = VanillaBlocks::GRASS()->asItem();
+        $grass->setCustomName("§aIsland Settings");
+        $grass->setLore([
+            "§7Manage your island",
+            "§7Invite players, kick members, etc.",
+            "§7Click to open island menu!"
+        ]);
+        $inventory->setItem(13, $grass);
+        $compass = VanillaItems::COMPASS();
+        $compass->setCustomName("§dGo To Skyblock Hub");
+        $compass->setLore([
+            "§7Fast travel to the hub",
+            "§7Click to teleport!"
+        ]);
+        $inventory->setItem(14, $compass);
+        $barrier = VanillaBlocks::BARRIER()->asItem();
+        $barrier->setCustomName("§cClose Menu");
+        $barrier->setLore([
+            "§7Close this menu"
+        ]);
+        $inventory->setItem(15, $barrier);
+
+        $menu->setListener(function(InvMenuTransaction $transaction) use ($npc): InvMenuTransactionResult {
+            $player = $transaction->getPlayer();
+            $itemClicked = $transaction->getItemClicked();
+            $slot = $transaction->getAction()->getSlot();
             
-            switch ($data) {
-                case 0:
+            switch ($slot) {
+                case 11:
                     $this->openNameChangeForm($player, $npc);
                     break;
-                case 1:
+                case 12:
                     $this->spawnManager->startLocationChangeMode($player, $npc);
+                    $player->removeCurrentWindow();
                     break;
-                case 2:
+                case 13:
                     $this->islandFormManager->openIslandSettingsMenu($player);
                     break;
-                case 3:
+                case 14:
                     $this->teleportToHub($player);
+                    $player->removeCurrentWindow();
+                    break;
+                case 15:
+                    $player->removeCurrentWindow();
                     break;
             }
+            
+            return $transaction->discard();
         });
 
-        $npcName = $npc->getDisplayName();
-        $form->setTitle("§6" . $npcName . "'s Menu");
-        $form->setContent("§7What would you like to do?");
-        
-        $form->addButton("§eChange " . $npcName . "'s Name\n§7Customize your NPC");
-        $form->addButton("§bChange " . $npcName . "'s Location\n§7Move your NPC");
-        $form->addButton("§aIsland Settings\n§7Manage your island");
-        $form->addButton("§dGo To Skyblock Hub\n§7Fast travel");
-
-        $player->sendForm($form);
+        $menu->send($player);
     }
 
     private function openNameChangeForm(Player $player, OzzyNPC $npc): void {
