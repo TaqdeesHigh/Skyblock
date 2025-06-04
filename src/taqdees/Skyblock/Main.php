@@ -66,7 +66,7 @@ class Main extends PluginBase {
     private function registerGenerators(): void {
         \taqdees\Skyblock\generators\VoidWorldGenerator::register();
     }
-
+    
     private function initializeManagers(): void {
         $this->dataManager = new DataManager($this);
         $this->islandManager = new IslandManager($this, $this->dataManager);

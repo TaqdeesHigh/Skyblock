@@ -28,7 +28,7 @@ abstract class BaseMinion extends Human {
     protected string $customName;
     protected Main $plugin;
     protected int $level = 1;
-    protected int $maxLevel = 11;
+    public int $maxLevel = 11;
     protected float $workRadius = 2.0;
     protected int $workCooldown = 20;
     protected int $lastWorkTick = 0;
@@ -86,6 +86,10 @@ abstract class BaseMinion extends Human {
         $tools = $this->profession->getTools();
         $toolIndex = min($this->level - 1, count($tools) - 1);
         return $tools[$toolIndex] ?? null;
+    }
+
+    public function getMaxLevel(): int {
+        return $this->maxLevel;
     }
 
     public function getMinionType(): string {

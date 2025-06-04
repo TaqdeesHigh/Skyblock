@@ -89,7 +89,7 @@ class MinionManager {
     public function openMinionMenu(Player $player, BaseMinion $minion): void {
         $player->sendMessage("§6=== " . $minion->getDisplayName() . " ===");
         $player->sendMessage("§7Type: §e" . $minion->getMinionType());
-        $player->sendMessage("§7Level: §a" . $minion->getLevel() . "/" . $minion->maxLevel);
+        $player->sendMessage("§7Level: §a" . $minion->getLevel() . "/" . $minion->getMaxLevel());
         $player->sendMessage("§7Right-click to upgrade (if you have resources)");
     }
 
