@@ -22,18 +22,31 @@ class MinionAreaStructure {
         $centerX = (int)$center->getX();
         $centerY = (int)$center->getY();
         $centerZ = (int)$center->getZ();
-        $minionX = $centerX + 5;
-        $minionZ = $centerZ;
-        $minionY = $centerY + 2;
-        for ($dx = -2; $dx <= 2; $dx++) {
-            for ($dz = -2; $dz <= 2; $dz++) {
+        
+        $minionX = $centerX + 3;
+        $minionZ = $centerZ + 3;
+        $minionY = $centerY + 3; 
+        
+        for ($dx = -1; $dx <= 1; $dx++) {
+            for ($dz = -1; $dz <= 1; $dz++) {
                 $world->setBlockAt($minionX + $dx, $minionY, $minionZ + $dz, VanillaBlocks::COBBLESTONE());
             }
         }
-        $corners = [[-2, -2], [2, -2], [-2, 2], [2, 2]];
+        $corners = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
         foreach ($corners as $corner) {
-            $world->setBlockAt($minionX + $corner[0], $minionY, $minionZ + $corner[1], VanillaBlocks::STONE_BRICKS());
+            $world->setBlockAt($minionX + $corner[0], $minionY, $minionZ + $corner[1], VanillaBlocks::COBBLESTONE());
         }
+        for ($dx = -2; $dx <= 2; $dx++) {
+            for ($dz = -2; $dz <= 2; $dz++) {
+                if (abs($dx) == 2 || abs($dz) == 2) {
+                    $blockBelow = $world->getBlockAt($minionX + $dx, $minionY - 1, $minionZ + $dz);
+                    if ($blockBelow->getTypeId() !== VanillaBlocks::AIR()->getTypeId()) {
+                        $world->setBlockAt($minionX + $dx, $minionY, $minionZ + $dz, VanillaBlocks::SMOOTH_STONE());
+                    }
+                }
+            }
+        }
+        
         if ($player !== null) {
             $this->spawnMinionInCenter($world, $minionX, $minionY + 1, $minionZ, $player, $minionType);
         }

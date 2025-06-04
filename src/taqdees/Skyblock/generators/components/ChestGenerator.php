@@ -33,7 +33,7 @@ class ChestGenerator {
         $this->scheduleChestFill($world, new Position($chestX, $chestY, $chestZ, $world));
     }
 
-    private function scheduleChestFill(World $world, Position $chestPos): void {
+    public function scheduleChestFill(World $world, Position $chestPos): void {
         $scheduler = $this->plugin->getScheduler();
         $scheduler->scheduleDelayedTask(new class($world, $chestPos, $this) extends \pocketmine\scheduler\Task {
             private World $world;

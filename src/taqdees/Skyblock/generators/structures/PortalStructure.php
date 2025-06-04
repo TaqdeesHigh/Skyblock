@@ -14,29 +14,32 @@ class PortalStructure {
         $centerX = (int)$center->getX();
         $centerY = (int)$center->getY();
         $centerZ = (int)$center->getZ();
-        $portalX = $centerX;
-        $portalZ = $centerZ + 7;
-        $portalY = $centerY + 1;
-        for ($dx = -2; $dx <= 2; $dx++) {
-            for ($dz = -2; $dz <= 2; $dz++) {
-                $world->setBlockAt($portalX + $dx, $portalY, $portalZ + $dz, VanillaBlocks::STONE_BRICKS());
+
+        $portalX = $centerX - 5;
+        $portalZ = $centerZ;
+        $portalY = $centerY + 2; 
+        
+        $this->createNetherPortalFrame($world, $portalX, $portalY, $portalZ);
+    }
+
+    private function createNetherPortalFrame(World $world, int $x, int $y, int $z): void {
+        for ($dz = 0; $dz <= 3; $dz++) {
+            $world->setBlockAt($x, $y, $z + $dz, VanillaBlocks::POLISHED_ANDESITE());
+        }
+        for ($dz = 0; $dz <= 3; $dz++) {
+            $world->setBlockAt($x, $y + 4, $z + $dz, VanillaBlocks::POLISHED_ANDESITE());
+        }
+        for ($dy = 1; $dy <= 3; $dy++) {
+            $world->setBlockAt($x, $y + $dy, $z, VanillaBlocks::POLISHED_ANDESITE());
+            $world->setBlockAt($x, $y + $dy, $z + 3, VanillaBlocks::POLISHED_ANDESITE());
+        }
+        for ($dz = 1; $dz <= 2; $dz++) {
+            for ($dy = 1; $dy <= 3; $dy++) {
+                $world->setBlockAt($x, $y + $dy, $z + $dz, VanillaBlocks::AIR());
             }
         }
-        $corners = [[-2, -2], [2, -2], [-2, 2], [2, 2]];
-        foreach ($corners as $corner) {
-            for ($dy = 1; $dy <= 4; $dy++) {
-                $block = $dy == 4 ? VanillaBlocks::CHISELED_STONE_BRICKS() : VanillaBlocks::STONE_BRICKS();
-                $world->setBlockAt($portalX + $corner[0], $portalY + $dy, $portalZ + $corner[1], $block);
-            }
+        for ($dz = -1; $dz <= 4; $dz++) {
+            $world->setBlockAt($x, $y - 1, $z + $dz, VanillaBlocks::POLISHED_ANDESITE());
         }
-        for ($dx = -2; $dx <= 2; $dx++) {
-            $world->setBlockAt($portalX + $dx, $portalY + 4, $portalZ - 2, VanillaBlocks::STONE_BRICKS());
-            $world->setBlockAt($portalX + $dx, $portalY + 4, $portalZ + 2, VanillaBlocks::STONE_BRICKS());
-        }
-        for ($dz = -1; $dz <= 1; $dz++) {
-            $world->setBlockAt($portalX - 2, $portalY + 4, $portalZ + $dz, VanillaBlocks::STONE_BRICKS());
-            $world->setBlockAt($portalX + 2, $portalY + 4, $portalZ + $dz, VanillaBlocks::STONE_BRICKS());
-        }
-        $world->setBlockAt($portalX, $portalY + 5, $portalZ, VanillaBlocks::CHISELED_STONE_BRICKS());
     }
 }

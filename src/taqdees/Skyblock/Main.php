@@ -35,9 +35,6 @@ class Main extends PluginBase {
     private AdminCommand $adminCommand;
     private IslandCommand $islandCommand;
     private MinionManager $minionManager;
-    
-    // /** @var array<string, bool> */
-    // private array $adminEditMode = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
@@ -110,21 +107,21 @@ class Main extends PluginBase {
         return $this->npcManager;
     }
 
-    // public function isInEditMode(string $playerName): bool {
-    //     return isset($this->adminEditMode[$playerName]);
-    // }
+    public function isInEditMode(string $playerName): bool {
+        return isset($this->adminEditMode[$playerName]);
+    }
 
-    // public function setEditMode(string $playerName, bool $enabled): void {
-    //     if ($enabled) {
-    //         $this->adminEditMode[$playerName] = true;
-    //     } else {
-    //         unset($this->adminEditMode[$playerName]);
-    //     }
-    // }
+    public function setEditMode(string $playerName, bool $enabled): void {
+        if ($enabled) {
+            $this->adminEditMode[$playerName] = true;
+        } else {
+            unset($this->adminEditMode[$playerName]);
+        }
+    }
 
-    // public function getAdminEditMode(): array {
-    //     return $this->adminEditMode;
-    // }
+    public function getAdminEditMode(): array {
+        return $this->adminEditMode;
+    }
 
     public function getMinionManager(): MinionManager {
         return $this->minionManager;
