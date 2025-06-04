@@ -20,6 +20,7 @@ use taqdees\Skyblock\managers\MinionManager;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use pocketmine\block\VanillaBlocks;
 
 abstract class BaseMinion extends Human {
 
@@ -253,17 +254,52 @@ abstract class BaseMinion extends Human {
     protected function findWork(): void {
         $world = $this->getWorld();
         $pos = $this->getPosition();
+        $workPositions = [];
+        $platformY = floor($pos->y - 1);
         
         for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
             for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
-                for ($y = -2; $y <= 2; $y++) {
-                    $blockPos = $pos->add($x, $y, $z);
-                    if ($this->canWorkOnBlock($blockPos)) {
-                        $this->targetBlock = $blockPos;
-                        $this->breakingTick = 0;
-                        $this->rotateTowardsBlock($blockPos);
-                        return;
-                    }
+                if ($x == 0 && $z == 0) {
+                    continue;
+                }
+                
+                $blockPos = new Vector3(
+                    floor($pos->x) + $x, 
+                    $platformY, 
+                    floor($pos->z) + $z
+                );
+                
+                if ($this->canWorkOnBlock($blockPos)) {
+                    $workPositions[] = $blockPos;
+                }
+            }
+        }
+        if (!empty($workPositions)) {
+            $randomIndex = array_rand($workPositions);
+            $this->targetBlock = $workPositions[$randomIndex];
+            $this->breakingTick = 0;
+            $this->rotateTowardsBlock($this->targetBlock);
+            return;
+        }
+        $this->generatePlatform();
+    }
+
+    protected function generatePlatform(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        $platformY = floor($pos->y - 1);
+        
+        for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
+            for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
+                $blockPos = new Vector3(
+                    floor($pos->x) + $x, 
+                    $platformY, 
+                    floor($pos->z) + $z
+                );
+                
+                $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+                if ($block->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
+                    $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::COBBLESTONE());
                 }
             }
         }

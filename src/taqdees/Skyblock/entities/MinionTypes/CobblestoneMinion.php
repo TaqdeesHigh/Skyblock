@@ -20,6 +20,14 @@ class CobblestoneMinion extends BaseMinion {
     protected function canWorkOnBlock(Vector3 $blockPos): bool {
         $world = $this->getWorld();
         $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        $minionPos = $this->getPosition();
+        $belowMinion = new Vector3(floor($minionPos->x), floor($minionPos->y - 1), floor($minionPos->z));
+        $targetPos = new Vector3(floor($blockPos->x), floor($blockPos->y), floor($blockPos->z));
+        
+        if ($targetPos->equals($belowMinion)) {
+            return false;
+        }
+        
         return $block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId();
     }
 
@@ -33,7 +41,41 @@ class CobblestoneMinion extends BaseMinion {
         if ($block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId()) {
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
             $world->dropItem($blockPos, VanillaBlocks::COBBLESTONE()->asItem());
+            $this->scheduleBlockRegeneration($blockPos);
         }
+    }
+
+    private function scheduleBlockRegeneration(Vector3 $blockPos): void {
+        $this->plugin->getScheduler()->scheduleDelayedTask(
+            new class($this->getWorld(), $blockPos) extends \pocketmine\scheduler\Task {
+                private $world;
+                private $blockPos;
+                
+                public function __construct($world, Vector3 $blockPos) {
+                    $this->world = $world;
+                    $this->blockPos = $blockPos;
+                }
+                
+                public function onRun(): void {
+                    if ($this->world->isLoaded()) {
+                        $currentBlock = $this->world->getBlockAt(
+                            (int)$this->blockPos->x, 
+                            (int)$this->blockPos->y, 
+                            (int)$this->blockPos->z
+                        );
+                        if ($currentBlock->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
+                            $this->world->setBlockAt(
+                                (int)$this->blockPos->x, 
+                                (int)$this->blockPos->y, 
+                                (int)$this->blockPos->z, 
+                                VanillaBlocks::COBBLESTONE()
+                            );
+                        }
+                    }
+                }
+            },
+            60
+        );
     }
 
     public function getSaveId(): string {
