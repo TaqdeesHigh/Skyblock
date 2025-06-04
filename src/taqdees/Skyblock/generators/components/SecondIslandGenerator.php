@@ -26,7 +26,7 @@ class SecondIslandGenerator {
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
         $this->portalStructure = new PortalStructure();
-        $this->minionAreaStructure = new MinionAreaStructure();
+        $this->minionAreaStructure = new MinionAreaStructure($plugin);
         $this->chestGenerator = new ChestGenerator($plugin);
     }
 
@@ -40,7 +40,7 @@ class SecondIslandGenerator {
         
         $this->generateTerrain($world, $islandCenter);
         $this->addNaturalDecorations($world, $islandCenter);
-        $this->generateStructures($world, $islandCenter);
+        $this->generateStructures($world, $islandCenter, $player);
         $this->chestGenerator->placeChest($world, $islandCenter);
         
         if ($player !== null) {
@@ -118,9 +118,11 @@ class SecondIslandGenerator {
         }
     }
 
-    private function generateStructures(World $world, Position $center): void {
+    private function generateStructures(World $world, Position $center, Player $player = null): void {
         $this->portalStructure->generate($world, $center);
-        $this->minionAreaStructure->generate($world, $center);
+        $minionType = "cobblestone";
+        
+        $this->minionAreaStructure->generate($world, $center, $player, $minionType);
     }
 
     private function spawnOzzyNPC(Player $player, World $world, Position $center): void {

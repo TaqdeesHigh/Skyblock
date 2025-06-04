@@ -34,6 +34,8 @@ class EventListener implements Listener {
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
 
+            // THIS FUNCTION WILL BE REMOVED!
+            //------------
             if ($customName === "§6Ozzy's Egg" && $this->plugin->isInEditMode($player->getName())) {
                 $event->cancel();
                 $block = $event->getBlock();
@@ -51,6 +53,30 @@ class EventListener implements Listener {
                     $player->getInventory()->setItemInHand($item);
                 }
                 return;
+            }
+            //------------
+
+            if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
+                $minionType = $item->getNamedTag()->getString("minionType", "");
+                
+                if (!empty($minionType) && $this->plugin->isInEditMode($player->getName())) {
+                    $event->cancel();
+                    $block = $event->getBlock();
+                    $blockPos = $block->getPosition();
+                    $spawnVector = $blockPos->add(0.5, 1, 0.5);
+                    $spawnPosition = new \pocketmine\world\Position(
+                        $spawnVector->getX(),
+                        $spawnVector->getY(),
+                        $spawnVector->getZ(),
+                        $blockPos->getWorld()
+                    );
+                    
+                    if ($this->plugin->getMinionManager()->spawnMinion($player, $spawnPosition, $minionType)) {
+                        $item->setCount($item->getCount() - 1);
+                        $player->getInventory()->setItemInHand($item);
+                    }
+                    return;
+                }
             }
 
             if ($customName === "§bLocation Egg" && $this->plugin->getNPCManager()->isInPlacingMode($player->getName())) {

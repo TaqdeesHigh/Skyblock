@@ -22,6 +22,9 @@ use taqdees\Skyblock\managers\IslandManager;
 use taqdees\Skyblock\managers\DataManager;
 use taqdees\Skyblock\managers\NPCManager;
 use taqdees\Skyblock\entities\OzzyNPC;
+use taqdees\Skyblock\managers\MinionManager;
+use taqdees\Skyblock\entities\MinionTypes\CobblestoneMinion;
+use taqdees\Skyblock\entities\MinionTypes\WheatMinion;
 
 class Main extends PluginBase {
 
@@ -30,6 +33,7 @@ class Main extends PluginBase {
     private NPCManager $npcManager;
     private AdminCommand $adminCommand;
     private IslandCommand $islandCommand;
+    private MinionManager $minionManager;
     
     /** @var array<string, bool> */
     private array $adminEditMode = [];
@@ -51,6 +55,12 @@ class Main extends PluginBase {
         EntityFactory::getInstance()->register(OzzyNPC::class, function(World $world, CompoundTag $nbt): OzzyNPC {
             return new OzzyNPC($this, EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
         }, ['OzzyNPC', 'taqdees:ozzynpc']);
+        EntityFactory::getInstance()->register(CobblestoneMinion::class, function(World $world, CompoundTag $nbt): CobblestoneMinion {
+            return new CobblestoneMinion($this, EntityDataHelper::parseLocation($nbt, $world), "cobblestone", null, $nbt);
+        }, ['CobblestoneMinion', 'taqdees:cobblestone_minion']);
+        EntityFactory::getInstance()->register(WheatMinion::class, function(World $world, CompoundTag $nbt): WheatMinion {
+            return new WheatMinion($this, EntityDataHelper::parseLocation($nbt, $world), "wheat", null, $nbt);
+        }, ['WheatMinion', 'taqdees:wheat_minion']);
     }
 
     private function registerGenerators(): void {
@@ -63,6 +73,7 @@ class Main extends PluginBase {
         $this->npcManager = new NPCManager($this);
         $this->adminCommand = new AdminCommand($this);
         $this->islandCommand = new IslandCommand($this, $this->islandManager);
+        $this->minionManager = new MinionManager($this);
     }
 
     private function registerListeners(): void {
@@ -110,6 +121,10 @@ class Main extends PluginBase {
 
     public function getAdminEditMode(): array {
         return $this->adminEditMode;
+    }
+
+    public function getMinionManager(): MinionManager {
+        return $this->minionManager;
     }
 
     public function getConfigValue(string $path, $default = null) {
