@@ -15,8 +15,11 @@ use pocketmine\math\Vector3;
 use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\entity\Human;
+use pocketmine\item\Item;
 use taqdees\Skyblock\managers\MinionManager;
 use taqdees\Skyblock\Main;
+use taqdees\Skyblock\minions\professions\Profession;
+use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
 abstract class BaseMinion extends Human {
 
@@ -36,17 +39,22 @@ abstract class BaseMinion extends Human {
     protected int $breakTime = 30;
     protected int $breakCooldown = 100;
     protected int $lastBreakTick = 0;
+    protected ?Profession $profession = null;
 
     public function __construct(Main $plugin, Location $location, string $minionType, Skin $skin = null, CompoundTag $nbt = null) {
         $this->plugin = $plugin;
         $this->minionType = $minionType;
         $this->customName = ucfirst($minionType) . " Minion";
+        $this->profession = $this->initializeProfession();
+        
         if ($skin === null) {
             $skin = $this->getDefaultSkin();
         }
         
         parent::__construct($location, $skin, $nbt);
     }
+
+    abstract protected function initializeProfession(): ?Profession;
 
     protected function getInitialSizeInfo(): EntitySizeInfo {
         return new EntitySizeInfo(0.8, 0.4);
@@ -61,7 +69,22 @@ abstract class BaseMinion extends Human {
     }
 
     public function getDisplayName(): string {
-        return $this->customName . " §7(Lv. " . $this->level . ")";
+        $professionName = $this->profession ? $this->profession->getDisplayName() : "§7Unknown";
+        return $professionName . " " . $this->customName . " §7(Lv. " . $this->level . ")";
+    }
+
+    public function getProfession(): ?Profession {
+        return $this->profession;
+    }
+
+    public function getCurrentTool(): ?Item {
+        if ($this->profession === null) {
+            return null;
+        }
+        
+        $tools = $this->profession->getTools();
+        $toolIndex = min($this->level - 1, count($tools) - 1);
+        return $tools[$toolIndex] ?? null;
     }
 
     public function getMinionType(): string {
@@ -75,6 +98,7 @@ abstract class BaseMinion extends Human {
     public function setLevel(int $level): void {
         $this->level = max(1, min($level, $this->maxLevel));
         $this->updateWorkStats();
+        $this->updateEquipment();
         $this->setNameTag($this->getDisplayName());
     }
 
@@ -84,9 +108,15 @@ abstract class BaseMinion extends Human {
         $this->breakCooldown = max(20, 100 - ($this->level - 1) * 8);
     }
 
+    protected function updateEquipment(): void {
+        $tool = $this->getCurrentTool();
+        if ($tool !== null) {
+            $this->getInventory()->setItemInHand($tool);
+        }
+    }
+
     protected function initEntity(CompoundTag $nbt): void {
         parent::initEntity($nbt);
-        
         $this->setNameTag($this->getDisplayName());
         $this->setNameTagAlwaysVisible(true);
         $this->setCanSaveWithChunk(true);
@@ -94,6 +124,7 @@ abstract class BaseMinion extends Human {
         $this->setHasGravity(false);
         $this->setMotion(new Vector3(0, 0, 0));
         $this->updateWorkStats();
+        $this->updateEquipment();
         $this->loadCustomSkin();
         $this->setScale(0.6);
     }
@@ -173,12 +204,27 @@ abstract class BaseMinion extends Human {
     }
 
     protected function getMinionColor(): string {
+        if ($this->profession !== null) {
+            switch ($this->profession->getColor()) {
+                case "§a":
+                    return "\x00\xFF\x00\xFF";
+                case "§7":
+                    return "\x7F\x7F\x7F\xFF";
+                case "§6":
+                    return "\xFF\xD7\x00\xFF";
+                case "§b":
+                    return "\x00\xFF\xFF\xFF";
+                default:
+                    return "\x8B\x69\x3D\xFF";
+            }
+        }
         return "\x8B\x69\x3D\xFF";
     }
 
     public function onUpdate(int $currentTick): bool {
         $this->enforcePosition();
         $this->setMotion(new Vector3(0, 0, 0));
+        
         if ($this->targetBlock !== null) {
             $this->breakingTick++;
             $this->lookAtBlock($this->targetBlock);
@@ -207,6 +253,7 @@ abstract class BaseMinion extends Human {
     protected function findWork(): void {
         $world = $this->getWorld();
         $pos = $this->getPosition();
+        
         for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
             for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
                 for ($y = -2; $y <= 2; $y++) {
@@ -328,11 +375,17 @@ abstract class BaseMinion extends Human {
         $nbt->setInt("breakTime", $this->breakTime);
         $nbt->setInt("breakCooldown", $this->breakCooldown);
         $nbt->setInt("lastBreakTick", $this->lastBreakTick);
+        
+        if ($this->profession !== null) {
+            $nbt->setString("profession", $this->profession->getName());
+        }
+        
         if ($this->lockedPosition !== null) {
             $nbt->setFloat("lockedX", $this->lockedPosition->x);
             $nbt->setFloat("lockedY", $this->lockedPosition->y);
             $nbt->setFloat("lockedZ", $this->lockedPosition->z);
         }
+        
         return $nbt;
     }
 
@@ -345,6 +398,12 @@ abstract class BaseMinion extends Human {
         $this->breakTime = $nbt->getInt("breakTime", 30);
         $this->breakCooldown = $nbt->getInt("breakCooldown", 100);
         $this->lastBreakTick = $nbt->getInt("lastBreakTick", 0);
+        
+        if ($nbt->hasTag("profession")) {
+            $this->profession = ProfessionRegistry::get($nbt->getString("profession"));
+        } else {
+            $this->profession = $this->initializeProfession();
+        }
         
         if ($nbt->hasTag("lockedX") && $nbt->hasTag("lockedY") && $nbt->hasTag("lockedZ")) {
             $this->lockedPosition = new Vector3(
@@ -359,6 +418,7 @@ abstract class BaseMinion extends Human {
         
         $this->setNameTag($this->getDisplayName());
         $this->updateWorkStats();
+        $this->updateEquipment();
         $this->setScale(0.6);
     }
 }

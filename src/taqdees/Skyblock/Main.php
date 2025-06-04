@@ -25,6 +25,7 @@ use taqdees\Skyblock\entities\OzzyNPC;
 use taqdees\Skyblock\managers\MinionManager;
 use taqdees\Skyblock\entities\MinionTypes\CobblestoneMinion;
 use taqdees\Skyblock\entities\MinionTypes\WheatMinion;
+use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
 class Main extends PluginBase {
 
@@ -35,8 +36,8 @@ class Main extends PluginBase {
     private IslandCommand $islandCommand;
     private MinionManager $minionManager;
     
-    /** @var array<string, bool> */
-    private array $adminEditMode = [];
+    // /** @var array<string, bool> */
+    // private array $adminEditMode = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
@@ -44,6 +45,8 @@ class Main extends PluginBase {
         if (!InvMenuHandler::isRegistered()) {
             InvMenuHandler::register($this);
         }
+        
+        ProfessionRegistry::init();
         
         $this->registerEntities();
         $this->registerGenerators();
@@ -107,21 +110,21 @@ class Main extends PluginBase {
         return $this->npcManager;
     }
 
-    public function isInEditMode(string $playerName): bool {
-        return isset($this->adminEditMode[$playerName]);
-    }
+    // public function isInEditMode(string $playerName): bool {
+    //     return isset($this->adminEditMode[$playerName]);
+    // }
 
-    public function setEditMode(string $playerName, bool $enabled): void {
-        if ($enabled) {
-            $this->adminEditMode[$playerName] = true;
-        } else {
-            unset($this->adminEditMode[$playerName]);
-        }
-    }
+    // public function setEditMode(string $playerName, bool $enabled): void {
+    //     if ($enabled) {
+    //         $this->adminEditMode[$playerName] = true;
+    //     } else {
+    //         unset($this->adminEditMode[$playerName]);
+    //     }
+    // }
 
-    public function getAdminEditMode(): array {
-        return $this->adminEditMode;
-    }
+    // public function getAdminEditMode(): array {
+    //     return $this->adminEditMode;
+    // }
 
     public function getMinionManager(): MinionManager {
         return $this->minionManager;

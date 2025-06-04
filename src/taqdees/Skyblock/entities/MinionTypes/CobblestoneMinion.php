@@ -8,11 +8,13 @@ use pocketmine\block\VanillaBlocks;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
+use taqdees\Skyblock\minions\professions\Profession;
+use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
 class CobblestoneMinion extends BaseMinion {
 
-    protected function getMinionColor(): string {
-        return "\x7F\x7F\x7F\xFF";
+    protected function initializeProfession(): ?Profession {
+        return ProfessionRegistry::get("mining");
     }
 
     protected function canWorkOnBlock(Vector3 $blockPos): bool {

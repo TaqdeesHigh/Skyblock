@@ -8,11 +8,13 @@ use pocketmine\block\VanillaBlocks;
 use pocketmine\item\VanillaItems;
 use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
+use taqdees\Skyblock\minions\professions\Profession;
+use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
 class WheatMinion extends BaseMinion {
 
-    protected function getMinionColor(): string {
-        return "\xFF\xFF\x00\xFF";
+    protected function initializeProfession(): ?Profession {
+        return ProfessionRegistry::get("farming");
     }
 
     protected function canWorkOnBlock(Vector3 $blockPos): bool {
