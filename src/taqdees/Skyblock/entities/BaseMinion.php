@@ -25,12 +25,17 @@ abstract class BaseMinion extends Human {
     protected Main $plugin;
     protected int $level = 1;
     protected int $maxLevel = 11;
-    protected float $workRadius = 5.0;
+    protected float $workRadius = 2.0;
     protected int $workCooldown = 20;
     protected int $lastWorkTick = 0;
     protected bool $isWorking = false;
     protected ?Vector3 $lockedPosition = null;
     protected bool $positionLocked = false;
+    protected ?Vector3 $targetBlock = null;
+    protected int $breakingTick = 0;
+    protected int $breakTime = 30;
+    protected int $breakCooldown = 100;
+    protected int $lastBreakTick = 0;
 
     public function __construct(Main $plugin, Location $location, string $minionType, Skin $skin = null, CompoundTag $nbt = null) {
         $this->plugin = $plugin;
@@ -44,7 +49,7 @@ abstract class BaseMinion extends Human {
     }
 
     protected function getInitialSizeInfo(): EntitySizeInfo {
-        return new EntitySizeInfo(1.8, 0.6);
+        return new EntitySizeInfo(0.8, 0.4);
     }
 
     public function getName(): string {
@@ -75,6 +80,8 @@ abstract class BaseMinion extends Human {
 
     protected function updateWorkStats(): void {
         $this->workCooldown = max(5, 20 - ($this->level - 1) * 2);
+        $this->breakTime = max(10, 30 - ($this->level - 1) * 2);
+        $this->breakCooldown = max(20, 100 - ($this->level - 1) * 8);
     }
 
     protected function initEntity(CompoundTag $nbt): void {
@@ -88,6 +95,7 @@ abstract class BaseMinion extends Human {
         $this->setMotion(new Vector3(0, 0, 0));
         $this->updateWorkStats();
         $this->loadCustomSkin();
+        $this->setScale(0.6);
     }
 
     private function lockPosition(): void {
@@ -171,16 +179,89 @@ abstract class BaseMinion extends Human {
     public function onUpdate(int $currentTick): bool {
         $this->enforcePosition();
         $this->setMotion(new Vector3(0, 0, 0));
-        
-        if ($currentTick - $this->lastWorkTick >= $this->workCooldown) {
-            $this->doWork();
-            $this->lastWorkTick = $currentTick;
+        if ($this->targetBlock !== null) {
+            $this->breakingTick++;
+            $this->lookAtBlock($this->targetBlock);
+            
+            if ($this->breakingTick >= $this->breakTime) {
+                $this->finishBreaking();
+                $this->breakingTick = 0;
+                $this->targetBlock = null;
+                $this->lastBreakTick = $currentTick;
+            }
+        } else {
+            if ($currentTick - $this->lastBreakTick >= $this->breakCooldown) {
+                if ($currentTick - $this->lastWorkTick >= $this->workCooldown) {
+                    $this->findWork();
+                    $this->lastWorkTick = $currentTick;
+                }
+            }
         }
         
         $result = parent::onUpdate($currentTick);
         $this->enforcePosition();
         
         return $result;
+    }
+
+    protected function findWork(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
+            for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
+                for ($y = -2; $y <= 2; $y++) {
+                    $blockPos = $pos->add($x, $y, $z);
+                    if ($this->canWorkOnBlock($blockPos)) {
+                        $this->targetBlock = $blockPos;
+                        $this->breakingTick = 0;
+                        $this->rotateTowardsBlock($blockPos);
+                        return;
+                    }
+                }
+            }
+        }
+    }
+
+    protected function canWorkOnBlock(Vector3 $blockPos): bool {
+        return false;
+    }
+
+    protected function finishBreaking(): void {
+        if ($this->targetBlock === null) return;
+        
+        $world = $this->getWorld();
+        $blockPos = $this->targetBlock;
+        $this->doWork();
+    }
+
+    protected function rotateTowardsBlock(Vector3 $blockPos): void {
+        $pos = $this->getPosition();
+        $dx = $blockPos->x - $pos->x;
+        $dz = $blockPos->z - $pos->z;
+        $yaw = atan2(-$dx, $dz) * 180 / M_PI;
+        if ($yaw < 0) {
+            $yaw += 360;
+        }
+        
+        $this->location->yaw = $yaw;
+        $this->setRotation($yaw, $this->location->pitch);
+    }
+
+    protected function lookAtBlock(Vector3 $blockPos): void {
+        $pos = $this->getPosition();
+        $dx = $blockPos->x - $pos->x;
+        $dy = $blockPos->y - $pos->y;
+        $dz = $blockPos->z - $pos->z;
+        $distance = sqrt($dx * $dx + $dz * $dz);
+        $pitch = -atan2($dy, $distance) * 180 / M_PI;
+        $yaw = atan2(-$dx, $dz) * 180 / M_PI;
+        if ($yaw < 0) {
+            $yaw += 360;
+        }
+        
+        $this->location->yaw = $yaw;
+        $this->location->pitch = $pitch;
+        $this->setRotation($yaw, $pitch);
     }
 
     protected function doWork(): void {}
@@ -244,6 +325,9 @@ abstract class BaseMinion extends Human {
         $nbt->setString("customName", $this->customName);
         $nbt->setInt("level", $this->level);
         $nbt->setInt("workCooldown", $this->workCooldown);
+        $nbt->setInt("breakTime", $this->breakTime);
+        $nbt->setInt("breakCooldown", $this->breakCooldown);
+        $nbt->setInt("lastBreakTick", $this->lastBreakTick);
         if ($this->lockedPosition !== null) {
             $nbt->setFloat("lockedX", $this->lockedPosition->x);
             $nbt->setFloat("lockedY", $this->lockedPosition->y);
@@ -258,6 +342,9 @@ abstract class BaseMinion extends Human {
         $this->customName = $nbt->getString("customName", ucfirst($this->minionType) . " Minion");
         $this->level = $nbt->getInt("level", 1);
         $this->workCooldown = $nbt->getInt("workCooldown", 20);
+        $this->breakTime = $nbt->getInt("breakTime", 30);
+        $this->breakCooldown = $nbt->getInt("breakCooldown", 100);
+        $this->lastBreakTick = $nbt->getInt("lastBreakTick", 0);
         
         if ($nbt->hasTag("lockedX") && $nbt->hasTag("lockedY") && $nbt->hasTag("lockedZ")) {
             $this->lockedPosition = new Vector3(
@@ -272,5 +359,6 @@ abstract class BaseMinion extends Human {
         
         $this->setNameTag($this->getDisplayName());
         $this->updateWorkStats();
+        $this->setScale(0.6);
     }
 }

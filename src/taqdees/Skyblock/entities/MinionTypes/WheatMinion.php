@@ -15,20 +15,23 @@ class WheatMinion extends BaseMinion {
         return "\xFF\xFF\x00\xFF";
     }
 
-    protected function doWork(): void {
+    protected function canWorkOnBlock(Vector3 $blockPos): bool {
         $world = $this->getWorld();
-        $pos = $this->getPosition();
-        for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
-            for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
-                $blockPos = $pos->add($x, 0, $z);
-                $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
-                if ($block->getTypeId() === VanillaBlocks::WHEAT()->getTypeId()) {
-                    $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::WHEAT());
-                    $world->dropItem($blockPos, VanillaItems::WHEAT());
-                    $world->dropItem($blockPos, VanillaItems::WHEAT_SEEDS());
-                    return;
-                }
-            }
+        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        return $block->getTypeId() === VanillaBlocks::WHEAT()->getTypeId();
+    }
+
+    protected function doWork(): void {
+        if ($this->targetBlock === null) return;
+        
+        $world = $this->getWorld();
+        $blockPos = $this->targetBlock;
+        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        
+        if ($block->getTypeId() === VanillaBlocks::WHEAT()->getTypeId()) {
+            $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::WHEAT());
+            $world->dropItem($blockPos, VanillaItems::WHEAT());
+            $world->dropItem($blockPos, VanillaItems::WHEAT_SEEDS());
         }
     }
 

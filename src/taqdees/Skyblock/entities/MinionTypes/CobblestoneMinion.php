@@ -15,22 +15,22 @@ class CobblestoneMinion extends BaseMinion {
         return "\x7F\x7F\x7F\xFF";
     }
 
-    protected function doWork(): void {
+    protected function canWorkOnBlock(Vector3 $blockPos): bool {
         $world = $this->getWorld();
-        $pos = $this->getPosition();
-        for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
-            for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
-                for ($y = -2; $y <= 2; $y++) {
-                    $blockPos = $pos->add($x, $y, $z);
-                    $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
-                    
-                    if ($block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId()) {
-                        $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
-                        $world->dropItem($blockPos, VanillaBlocks::COBBLESTONE()->asItem());
-                        return;
-                    }
-                }
-            }
+        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        return $block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId();
+    }
+
+    protected function doWork(): void {
+        if ($this->targetBlock === null) return;
+        
+        $world = $this->getWorld();
+        $blockPos = $this->targetBlock;
+        $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        
+        if ($block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId()) {
+            $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
+            $world->dropItem($blockPos, VanillaBlocks::COBBLESTONE()->asItem());
         }
     }
 
