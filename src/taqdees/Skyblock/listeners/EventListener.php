@@ -16,7 +16,6 @@ use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
 use pocketmine\block\VanillaBlocks;
 use taqdees\Skyblock\Main;
-use taqdees\Skyblock\commands\AdminCommand;
 use taqdees\Skyblock\entities\OzzyNPC;
 
 class EventListener implements Listener {
@@ -31,18 +30,6 @@ class EventListener implements Listener {
         $player = $event->getPlayer();
         $item = $event->getItem();
         $action = $event->getAction();
-        
-        if ($this->plugin->isInEditMode($player->getName()) && 
-            $item->getTypeId() === VanillaItems::COMPASS()->getTypeId()) {
-            
-            $customName = $item->getCustomName();
-            if ($customName === "§bSkyblock Setup Compass") {
-                $event->cancel();
-                $adminCommand = new AdminCommand($this->plugin);
-                $adminCommand->openSetupForm($player);
-                return;
-            }
-        }
         
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
@@ -82,23 +69,6 @@ class EventListener implements Listener {
                     $item->setCount($item->getCount() - 1);
                     $player->getInventory()->setItemInHand($item);
                 }
-                return;
-            }
-        }
-    }
-
-    public function onPlayerItemUse(PlayerItemUseEvent $event): void {
-        $player = $event->getPlayer();
-        $item = $event->getItem();
-        
-        if ($this->plugin->isInEditMode($player->getName()) && 
-            $item->getTypeId() === VanillaItems::COMPASS()->getTypeId()) {
-            
-            $customName = $item->getCustomName();
-            if ($customName === "§bSkyblock Setup Compass") {
-                $event->cancel();
-                $adminCommand = new AdminCommand($this->plugin);
-                $adminCommand->openSetupForm($player);
                 return;
             }
         }
@@ -147,11 +117,13 @@ class EventListener implements Listener {
             }
         }
     }
+    
     public function onPlayerQuit(PlayerQuitEvent $event): void {
         $playerName = $event->getPlayer()->getName();
         $this->plugin->getNPCManager()->cleanupPlayer($playerName);
         $this->plugin->setEditMode($playerName, false);
     }
+    
     public function onPlayerLogin(PlayerLoginEvent $event): void {
         $playerName = $event->getPlayer()->getName();
         $this->plugin->getNPCManager()->cleanupPlayer($playerName);
