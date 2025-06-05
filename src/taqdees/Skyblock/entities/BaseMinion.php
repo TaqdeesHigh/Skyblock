@@ -398,7 +398,7 @@ abstract class BaseMinion extends Human {
     }
 
     public function onInteract(Player $player, Vector3 $clickVector): bool {
-        $this->plugin->getMinionManager()->openMinionMenu($player, $this);
+        $this->plugin->getMinionManager()->openMinionInventoryMenu($player, $this);
         return true;
     }
 
