@@ -10,17 +10,24 @@ use pocketmine\entity\Location;
 use pocketmine\player\Player;
 use pocketmine\event\entity\EntityDamageEvent;
 use pocketmine\nbt\tag\CompoundTag;
+use pocketmine\nbt\tag\StringTag;
+use pocketmine\nbt\tag\ListTag;
+use pocketmine\nbt\tag\IntTag;
 use pocketmine\entity\Skin;
 use pocketmine\math\Vector3;
 use pocketmine\entity\Entity;
 use pocketmine\network\mcpe\protocol\types\entity\EntityIds;
 use pocketmine\entity\Human;
 use pocketmine\item\Item;
+use pocketmine\item\VanillaItems;
+use pocketmine\block\VanillaBlocks;
+use pocketmine\item\StringToItemParser;
 use taqdees\Skyblock\managers\MinionManager;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
-use pocketmine\block\VanillaBlocks;
+use pocketmine\nbt\LittleEndianNbtSerializer;
+use pocketmine\nbt\TreeRoot;
 
 abstract class BaseMinion extends Human {
 
@@ -42,6 +49,10 @@ abstract class BaseMinion extends Human {
     protected int $lastBreakTick = 0;
     protected ?Profession $profession = null;
 
+    protected array $minionInventory = [];
+    protected int $maxInventorySlots = 15;
+    protected bool $inventoryChanged = false;
+
     public function __construct(Main $plugin, Location $location, string $minionType, Skin $skin = null, CompoundTag $nbt = null) {
         $this->plugin = $plugin;
         $this->minionType = $minionType;
@@ -53,6 +64,7 @@ abstract class BaseMinion extends Human {
         }
         
         parent::__construct($location, $skin, $nbt);
+        $this->loadFromFile();
     }
 
     abstract protected function initializeProfession(): ?Profession;
@@ -71,7 +83,8 @@ abstract class BaseMinion extends Human {
 
     public function getDisplayName(): string {
         $professionName = $this->profession ? $this->profession->getDisplayName() : "§7Unknown";
-        return $professionName . " " . $this->customName . " §7(Lv. " . $this->level . ")";
+        $inventoryStatus = $this->getInventoryItemCount() . "/" . $this->getMaxInventorySlots();
+        return $professionName . " " . $this->customName . " §7(Lv. " . $this->level . ") §8[" . $inventoryStatus . "]";
     }
 
     public function getProfession(): ?Profession {
@@ -230,6 +243,12 @@ abstract class BaseMinion extends Human {
         $this->enforcePosition();
         $this->setMotion(new Vector3(0, 0, 0));
         
+        // Auto-save every 5 minutes (6000 ticks)
+        if ($currentTick % 6000 === 0 && $this->inventoryChanged) {
+            $this->saveToFile();
+        }
+    
+        
         if ($this->targetBlock !== null) {
             $this->breakingTick++;
             $this->lookAtBlock($this->targetBlock);
@@ -256,6 +275,10 @@ abstract class BaseMinion extends Human {
     }
 
     protected function findWork(): void {
+        if ($this->isInventoryFull()) {
+            return;
+        }
+        
         $world = $this->getWorld();
         $pos = $this->getPosition();
         $workPositions = [];
@@ -278,6 +301,7 @@ abstract class BaseMinion extends Human {
                 }
             }
         }
+        
         if (!empty($workPositions)) {
             $randomIndex = array_rand($workPositions);
             $this->targetBlock = $workPositions[$randomIndex];
@@ -406,6 +430,267 @@ abstract class BaseMinion extends Human {
         return $this->minionType . "_minion";
     }
 
+    public function getMinionInventory(): array {
+        return $this->minionInventory;
+    }
+
+    public function getMaxInventorySlots(): int {
+        return min($this->level * 2, $this->maxInventorySlots);
+    }
+
+    public function hasInventorySpace(): bool {
+        return count($this->minionInventory) < $this->getMaxInventorySlots();
+    }
+
+    public function addItemToInventory(Item $item): bool {
+        if ($item->isNull() || $item->getCount() <= 0) {
+            return false;
+        }
+
+        $slotsAvailable = $this->getMaxInventorySlots();
+        $originalCount = $item->getCount();
+        
+        foreach ($this->minionInventory as $key => $inventoryItem) {
+            if ($inventoryItem->equals($item, true, false)) {
+                $maxStack = $inventoryItem->getMaxStackSize();
+                $currentCount = $inventoryItem->getCount();
+                $itemCount = $item->getCount();
+                
+                if ($currentCount + $itemCount <= $maxStack) {
+                    $inventoryItem->setCount($currentCount + $itemCount);
+                    $this->markInventoryChanged();
+                    return true;
+                } else {
+                    $canAdd = $maxStack - $currentCount;
+                    if ($canAdd > 0) {
+                        $inventoryItem->setCount($maxStack);
+                        $item->setCount($itemCount - $canAdd);
+                        $this->markInventoryChanged();
+                    }
+                }
+            }
+        }
+        if (count($this->minionInventory) < $slotsAvailable && $item->getCount() > 0) {
+            $this->minionInventory[] = clone $item;
+            $this->markInventoryChanged();
+            return true;
+        }
+        
+        return false;
+    }
+
+    public function collectItemsFromInventory(Player $player): int {
+        $collected = 0;
+        $itemsToRemove = [];
+        
+        foreach ($this->minionInventory as $key => $item) {
+            if ($player->getInventory()->canAddItem($item)) {
+                $player->getInventory()->addItem($item);
+                $itemsToRemove[] = $key;
+                $collected++;
+            } else {
+                break;
+            }
+        }
+        foreach (array_reverse($itemsToRemove) as $key) {
+            unset($this->minionInventory[$key]);
+        }
+        $this->minionInventory = array_values($this->minionInventory);
+        
+        if ($collected > 0) {
+            $this->markInventoryChanged();
+        }
+        
+        return $collected;
+    }
+
+    public function forceSave(): void {
+        try {
+            $nbt = $this->saveNBT();
+            $this->plugin->getLogger()->info("Minion data saved for " . $this->getDisplayName());
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Failed to save minion data: " . $e->getMessage());
+        }
+    }
+
+    public function getInventoryItemCount(): int {
+        return count($this->minionInventory);
+    }
+
+    public function isInventoryFull(): bool {
+        return !$this->hasInventorySpace();
+    }
+
+    protected function markInventoryChanged(): void {
+        $this->inventoryChanged = true;
+        $this->saveToFile();
+    }
+
+    public function saveToFile(): void {
+        try {
+            $data = [
+                'minionType' => $this->minionType,
+                'level' => $this->level,
+                'position' => [
+                    'x' => $this->getPosition()->x,
+                    'y' => $this->getPosition()->y,
+                    'z' => $this->getPosition()->z,
+                    'world' => $this->getWorld()->getFolderName()
+                ],
+                'inventory' => []
+            ];
+            foreach ($this->minionInventory as $slot => $item) {
+                if (!$item->isNull() && $item->getCount() > 0) {
+                    $data['inventory'][] = [
+                        'id' => $item->getTypeId(),
+                        'count' => $item->getCount(),
+                        'name' => $item->getName(),
+                        'nbt' => base64_encode((new \pocketmine\nbt\LittleEndianNbtSerializer())->write(new \pocketmine\nbt\TreeRoot($item->nbtSerialize())))
+
+                    ];
+                }
+            }
+            $minionsDir = $this->plugin->getDataFolder() . "minions/";
+            if (!is_dir($minionsDir)) {
+                mkdir($minionsDir, 0777, true);
+            }
+            
+            $fileName = "minion_" . $this->minionType . "_" . floor($this->getPosition()->x) . "_" . floor($this->getPosition()->y) . "_" . floor($this->getPosition()->z) . ".json";
+            $filePath = $minionsDir . $fileName;
+            
+            $result = file_put_contents($filePath, json_encode($data, JSON_PRETTY_PRINT));
+            if ($result === false) {
+                $this->plugin->getLogger()->error("Failed to write minion data to file: " . $filePath);
+            } else {
+                $this->plugin->getLogger()->debug("Saved minion data to: " . $filePath);
+                $this->inventoryChanged = false;
+            }
+            
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Failed to save minion data: " . $e->getMessage());
+        }
+    }
+
+    public function loadFromFile(): void {
+        try {
+            $minionsDir = $this->plugin->getDataFolder() . "minions/";
+            $fileName = "minion_" . $this->minionType . "_" . floor($this->getPosition()->x) . "_" . floor($this->getPosition()->y) . "_" . floor($this->getPosition()->z) . ".json";
+            $filePath = $minionsDir . $fileName;
+            
+            if (!file_exists($filePath)) {
+                $this->plugin->getLogger()->debug("No save file found for minion at: " . $filePath);
+                return;
+            }
+            
+            $content = file_get_contents($filePath);
+            if ($content === false) {
+                $this->plugin->getLogger()->error("Failed to read minion save file: " . $filePath);
+                return;
+            }
+            
+            $data = json_decode($content, true);
+            if (!is_array($data)) {
+                $this->plugin->getLogger()->error("Invalid JSON in minion save file: " . $filePath);
+                return;
+            }
+            
+            $this->level = $data['level'] ?? 1;
+            $this->minionInventory = [];
+            
+            if (isset($data['inventory']) && is_array($data['inventory'])) {
+                $this->plugin->getLogger()->info("Loading " . count($data['inventory']) . " items from file for minion");
+                foreach ($data['inventory'] as $itemData) {
+                    $item = $this->createItemFromData($itemData);
+                    if ($item !== null && !$item->isNull()) {
+                        $this->minionInventory[] = $item;
+                        $this->plugin->getLogger()->info("Loaded item: " . $item->getName() . " x" . $item->getCount());
+                    }
+                }
+            }
+            
+            $this->plugin->getLogger()->info("Successfully loaded minion data from: " . $filePath . " with " . count($this->minionInventory) . " items");
+            
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Failed to load minion data: " . $e->getMessage());
+        }
+    }
+
+    private function createItemFromData(array $itemData): ?Item {
+        try {
+            $typeId = $itemData['id'] ?? 0;
+            $count = $itemData['count'] ?? 1;
+            $nbtData = $itemData['nbt'] ?? '';
+            $name = $itemData['name'] ?? '';
+            
+            $this->plugin->getLogger()->info("Attempting to create item with type ID: " . $typeId . ", name: " . $name);
+            
+            $item = null;
+            if ($typeId < 0) {
+                foreach (VanillaBlocks::getAll() as $block) {
+                    if ($block->getTypeId() === $typeId) {
+                        $item = $block->asItem();
+                        break;
+                    }
+                }
+            } else {
+                foreach (VanillaItems::getAll() as $vanillaItem) {
+                    if ($vanillaItem->getTypeId() === $typeId) {
+                        $item = clone $vanillaItem;
+                        break;
+                    }
+                }
+                
+                if ($item === null) {
+                    foreach (VanillaBlocks::getAll() as $block) {
+                        if ($block->getTypeId() === $typeId) {
+                            $item = $block->asItem();
+                            break;
+                        }
+                    }
+                }
+            }
+            if ($item === null && !empty($name)) {
+                try {
+                    $parser = StringToItemParser::getInstance();
+                    $item = $parser->parse($name);
+                    $this->plugin->getLogger()->info("Created item using StringToItemParser: " . $name);
+                } catch (\Exception $e) {
+                    $this->plugin->getLogger()->warning("StringToItemParser failed for: " . $name);
+                }
+            }
+            if ($item === null && $typeId === -10080) {
+                $item = VanillaBlocks::COBBLESTONE()->asItem();
+                $this->plugin->getLogger()->info("Created cobblestone as fallback");
+            }
+            
+            if ($item === null) {
+                $this->plugin->getLogger()->warning("Could not create item with type ID: " . $typeId . " and name: " . $name);
+                return null;
+            }
+            
+            $item->setCount($count);
+            if (!empty($nbtData)) {
+                try {
+                    $decodedNBT = base64_decode($nbtData);
+                    if ($decodedNBT !== false) {
+                        $reader = new \pocketmine\nbt\LittleEndianNbtSerializer();
+                        $itemNBTTag = $reader->read($decodedNBT)->mustGetCompoundTag();
+                        $item->nbtDeserialize($itemNBTTag);
+                    }
+                } catch (\Exception $e) {
+                    $this->plugin->getLogger()->warning("Failed to deserialize item NBT: " . $e->getMessage());
+                }
+            }
+            
+            $this->plugin->getLogger()->info("Successfully created item: " . $item->getName() . " with count: " . $item->getCount());
+            return $item;
+            
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Error creating item from data: " . $e->getMessage());
+            return null;
+        }
+    }
+
     public function saveNBT(): CompoundTag {
         $nbt = parent::saveNBT();
         $nbt->setString("minionType", $this->minionType);
@@ -425,6 +710,29 @@ abstract class BaseMinion extends Human {
             $nbt->setFloat("lockedY", $this->lockedPosition->y);
             $nbt->setFloat("lockedZ", $this->lockedPosition->z);
         }
+        
+        $inventoryList = new ListTag();
+        foreach ($this->minionInventory as $slot => $item) {
+            if ($item === null || $item->isNull() || $item->getCount() <= 0) {
+                continue;
+            }
+            
+            try {
+                $itemData = new CompoundTag();
+                $itemData->setInt("id", $item->getTypeId());
+                $itemData->setInt("count", $item->getCount());
+                $itemData->setInt("slot", $slot);
+                $itemNBT = $item->nbtSerialize();
+                $writer = new \pocketmine\nbt\LittleEndianNbtSerializer();
+                $itemNBTBinary = $writer->write(new \pocketmine\nbt\TreeRoot($itemNBT));
+                $itemData->setString("itemNBT", base64_encode($itemNBTBinary));
+                
+                $inventoryList->push($itemData);
+            } catch (\Exception $e) {
+                $this->plugin->getLogger()->warning("Failed to save minion inventory item: " . $e->getMessage());
+            }
+        }
+        $nbt->setTag("MinionInventory", $inventoryList);
         
         return $nbt;
     }
@@ -455,10 +763,101 @@ abstract class BaseMinion extends Human {
         } else {
             $this->lockPosition();
         }
+        $this->minionInventory = [];
+        if ($nbt->hasTag("MinionInventory")) {
+            $inventoryList = $nbt->getListTag("MinionInventory");
+            foreach ($inventoryList as $itemTag) {
+                if ($itemTag instanceof CompoundTag) {
+                    try {
+                        $typeId = $itemTag->getInt("id");
+                        $count = $itemTag->getInt("count");
+                        
+                        $itemNBTString = $itemTag->getString("itemNBT", "");
+                        
+                        $item = $this->createItemFromTypeId($typeId, $count);
+                        if ($item !== null && !empty($itemNBTString)) {
+                            try {
+                                $decodedNBT = base64_decode($itemNBTString);
+                                if ($decodedNBT !== false) {
+                                    $reader = new \pocketmine\nbt\LittleEndianNbtSerializer();
+                                    $itemNBTTag = $reader->read($decodedNBT)->mustGetCompoundTag();
+                                    $item->nbtDeserialize($itemNBTTag);
+                                }
+                            } catch (\Exception $e) {
+                                $this->plugin->getLogger()->warning("Failed to deserialize item NBT: " . $e->getMessage());
+                            }
+                        }
+                        
+                        if ($item !== null && !$item->isNull()) {
+                            $this->minionInventory[] = $item;
+                        }
+                    } catch (\Exception $e) {
+                        $this->plugin->getLogger()->warning("Failed to load minion inventory item: " . $e->getMessage());
+                    }
+                }
+            }
+        }
+        $this->loadFromFile();
         
         $this->setNameTag($this->getDisplayName());
         $this->updateWorkStats();
         $this->updateEquipment();
         $this->setScale(0.6);
+    }
+
+    private function createItemFromTypeId(int $typeId, int $count): ?Item {
+        try {
+            $this->plugin->getLogger()->info("Creating item from type ID: " . $typeId . " with count: " . $count);
+            
+            $item = null;
+            if ($typeId < 0) {
+                foreach (VanillaBlocks::getAll() as $block) {
+                    if ($block->getTypeId() === $typeId) {
+                        $item = $block->asItem();
+                        $this->plugin->getLogger()->info("Found block with negative ID: " . $block->getName());
+                        break;
+                    }
+                }
+            } else {
+                foreach (VanillaItems::getAll() as $vanillaItem) {
+                    if ($vanillaItem->getTypeId() === $typeId) {
+                        $item = clone $vanillaItem;
+                        break;
+                    }
+                }
+                if ($item === null) {
+                    foreach (VanillaBlocks::getAll() as $block) {
+                        if ($block->getTypeId() === $typeId) {
+                            $item = $block->asItem();
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if ($item === null) {
+                $this->plugin->getLogger()->warning("Could not create item with type ID: " . $typeId);
+                return null;
+            }
+            
+            $item->setCount($count);
+            $this->plugin->getLogger()->info("Successfully created item: " . $item->getName() . " with count: " . $count);
+            return $item;
+            
+        } catch (\Exception $e) {
+            $this->plugin->getLogger()->error("Error creating item from type ID $typeId: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    protected function onDispose(): void {
+        if ($this->inventoryChanged || !empty($this->minionInventory)) {
+            $this->saveToFile();
+        }
+        parent::onDispose();
+    }
+    
+    public function onServerShutdown(): void {
+        $this->saveToFile();
     }
 }

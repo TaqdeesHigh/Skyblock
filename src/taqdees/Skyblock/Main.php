@@ -140,5 +140,15 @@ class Main extends PluginBase {
         
         return $value;
     }
+
+    public function onDisable(): void {
+        foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
+            foreach ($world->getEntities() as $entity) {
+                if ($entity instanceof BaseMinion) {
+                    $entity->onServerShutdown();
+                }
+            }
+        }
+    }
     
 }

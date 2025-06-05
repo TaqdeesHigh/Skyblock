@@ -54,6 +54,8 @@ class MinionSpawnManager {
         }
 
         $minion->spawnToAll();
+        $minion->loadFromFile();
+        
         $this->dataManager->addPlayerMinion($player->getName(), $minion);
         $this->dataManager->saveMinionData($player->getName(), $position, $minionType, 1);
         
@@ -78,6 +80,8 @@ class MinionSpawnManager {
         }
 
         $minion->spawnToAll();
+        $minion->loadFromFile();
+        
         $this->dataManager->addPlayerMinion($player->getName(), $minion);
         $this->dataManager->saveMinionData($player->getName(), $position, $minionType, 1);
         

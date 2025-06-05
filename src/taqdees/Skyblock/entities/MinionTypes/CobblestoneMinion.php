@@ -40,7 +40,12 @@ class CobblestoneMinion extends BaseMinion {
         
         if ($block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId()) {
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
-            $world->dropItem($blockPos, VanillaBlocks::COBBLESTONE()->asItem());
+            $cobblestone = VanillaBlocks::COBBLESTONE()->asItem();
+            $added = $this->addItemToInventory($cobblestone);
+            if (!$added) {
+                $world->dropItem($blockPos, $cobblestone);
+            }
+            
             $this->scheduleBlockRegeneration($blockPos);
         }
     }

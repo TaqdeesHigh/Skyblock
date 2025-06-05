@@ -13,6 +13,8 @@ use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
 class WheatMinion extends BaseMinion {
 
+    // This Minion type is not tested yet.
+
     protected function initializeProfession(): ?Profession {
         return ProfessionRegistry::get("farming");
     }
@@ -32,11 +34,19 @@ class WheatMinion extends BaseMinion {
         
         if ($block->getTypeId() === VanillaBlocks::WHEAT()->getTypeId()) {
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::WHEAT());
-            $world->dropItem($blockPos, VanillaItems::WHEAT());
-            $world->dropItem($blockPos, VanillaItems::WHEAT_SEEDS());
+            $wheat = VanillaItems::WHEAT();
+            $seeds = VanillaItems::WHEAT_SEEDS();
+            
+            $wheatAdded = $this->addItemToInventory($wheat);
+            $seedsAdded = $this->addItemToInventory($seeds);
+            if (!$wheatAdded) {
+                $world->dropItem($blockPos, $wheat);
+            }
+            if (!$seedsAdded) {
+                $world->dropItem($blockPos, $seeds);
+            }
         }
     }
-
     public function getSaveId(): string {
         return "wheat_minion";
     }

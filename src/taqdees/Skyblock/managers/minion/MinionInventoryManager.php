@@ -24,6 +24,7 @@ class MinionInventoryManager {
         $this->upgradeManager = $upgradeManager;
     }
 
+    // (will be used later.)
     public function openMinionMenu(Player $player, BaseMinion $minion): void {
         $player->sendMessage("§6=== " . $minion->getDisplayName() . " ===");
         $player->sendMessage("§7Type: §e" . $minion->getMinionType());
@@ -63,6 +64,10 @@ class MinionInventoryManager {
         }
         $glassPane->getNamedTag()->setByte("color", $color);
         return $glassPane;
+    }
+
+    private function countStorageItems(BaseMinion $minion): int {
+        return $minion->getInventoryItemCount();
     }
 
     private function setupTopRowItems($inventory, BaseMinion $minion): void {
@@ -144,12 +149,17 @@ class MinionInventoryManager {
             39, 40, 41, 42, 43
         ];
         
-        $unlockedSlots = min($minion->getLevel() * 2, count($storageSlots));
+        $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
+        $minionInventory = $minion->getMinionInventory();
         
         for ($i = 0; $i < count($storageSlots); $i++) {
             $slot = $storageSlots[$i];
             if ($i < $unlockedSlots) {
-                $inventory->clear($slot);
+                if (isset($minionInventory[$i])) {
+                    $inventory->setItem($slot, $minionInventory[$i]);
+                } else {
+                    $inventory->clear($slot);
+                }
             } else {
                 $inventory->setItem($slot, $whiteGlassPane);
             }
@@ -193,8 +203,6 @@ class MinionInventoryManager {
             "§7Items in storage: §e" . $this->countStorageItems($minion)
         ]);
         $inventory->setItem(48, $collectButton);
-        
-        // Pickup minion button
         $pickupButton = VanillaBlocks::BEDROCK()->asItem();
         $pickupButton->setCustomName("§cPickup Minion");
         $pickupButton->setLore([
@@ -272,12 +280,13 @@ class MinionInventoryManager {
         );
     }
 
-    private function countStorageItems(BaseMinion $minion): int {
-        return 0;
-    }
-
     private function collectMinionItems(Player $player, BaseMinion $minion): void {
-        // TODO: Implement item collection from minion storage
+        $collected = $minion->collectItemsFromInventory($player);
+        if ($collected > 0) {
+            $player->sendMessage("§aCollected " . $collected . " item stacks from minion!");
+        } else {
+            $player->sendMessage("§cNo items to collect or your inventory is full!");
+        }
     }
 
     private function pickupMinion(Player $player, BaseMinion $minion): void {
