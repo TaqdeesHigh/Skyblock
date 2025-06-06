@@ -220,18 +220,39 @@ class MinionInventoryManager {
         $storageSlots = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
         $unlockedSlots = min($minion->getLevel() * 2, count($storageSlots));
         
-        $menu->setListener(function(InvMenuTransaction $transaction) use ($minion, $storageSlots, $unlockedSlots): InvMenuTransactionResult {
+        $menu->setListener(function(InvMenuTransaction $transaction) use ($minion, $storageSlots, $unlockedSlots, $menu): InvMenuTransactionResult {
             $player = $transaction->getPlayer();
             $slot = $transaction->getAction()->getSlot();
             $clickedItem = $transaction->getItemClicked();
             $storageSlotIndex = array_search($slot, $storageSlots);
+            
             if ($storageSlotIndex !== false && $storageSlotIndex < $unlockedSlots) {
+                $this->plugin->getScheduler()->scheduleDelayedTask(
+                    new \pocketmine\scheduler\ClosureTask(function() use ($menu, $minion, $storageSlots, $unlockedSlots): void {
+                        $this->syncMinionInventoryFromMenu($menu, $minion, $storageSlots, $unlockedSlots);
+                    }), 1
+                );
                 return $transaction->continue();
             }
+            
             $this->handleButtonClick($player, $minion, $slot, $clickedItem);
             
             return $transaction->discard();
         });
+    }
+
+    private function syncMinionInventoryFromMenu(InvMenu $menu, BaseMinion $minion, array $storageSlots, int $unlockedSlots): void {
+        $menuInventory = $menu->getInventory();
+        $newMinionInventory = [];
+        for ($i = 0; $i < $unlockedSlots; $i++) {
+            $slot = $storageSlots[$i];
+            $item = $menuInventory->getItem($slot);
+            
+            if (!$item->isNull() && $item->getCount() > 0) {
+                $newMinionInventory[] = clone $item;
+            }
+        }
+        $minion->syncInventoryFromArray($newMinionInventory);
     }
 
     private function handleButtonClick(Player $player, BaseMinion $minion, int $slot, \pocketmine\item\Item $clickedItem): void {

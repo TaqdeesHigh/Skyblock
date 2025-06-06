@@ -32,6 +32,11 @@ trait MinionInventoryTrait {
         return !$this->hasInventorySpace();
     }
 
+    public function syncInventoryFromArray(array $newInventory): void {
+        $this->minionInventory = $newInventory;
+        $this->markInventoryChanged();
+    }
+
     public function addItemToInventory(Item $item): bool {
         if ($item->isNull() || $item->getCount() <= 0) {
             return false;
