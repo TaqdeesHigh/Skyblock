@@ -18,6 +18,8 @@ class MinionInventoryManager {
 
     private Main $plugin;
     private MinionUpgradeManager $upgradeManager;
+    /** @var array<string, InvMenu> */
+    private array $openMenus = [];
 
     public function __construct(Main $plugin, MinionUpgradeManager $upgradeManager) {
         $this->plugin = $plugin;
@@ -35,11 +37,15 @@ class MinionInventoryManager {
     public function openMinionInventoryMenu(Player $player, BaseMinion $minion): void {
         $menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
         $menu->setName($minion->getDisplayName());
+        $this->openMenus[$player->getName()] = $menu;
         
         $inventory = $menu->getInventory();
         
         $this->setupMenuLayout($inventory, $minion);
         $this->setupMenuListener($menu, $minion);
+        $menu->setInventoryCloseListener(function(Player $player, \pocketmine\inventory\Inventory $inventory): void {
+            unset($this->openMenus[$player->getName()]);
+        });
         
         $menu->send($player);
     }
@@ -305,9 +311,54 @@ class MinionInventoryManager {
         $collected = $minion->collectItemsFromInventory($player);
         if ($collected > 0) {
             $player->sendMessage("§aCollected " . $collected . " item stacks from minion!");
+            $this->updateStorageDisplay($player, $minion);
+            $this->updateCollectButton($player, $minion);
         } else {
             $player->sendMessage("§cNo items to collect or your inventory is full!");
         }
+    }
+
+    private function updateStorageDisplay(Player $player, BaseMinion $minion): void {
+        if (!isset($this->openMenus[$player->getName()])) {
+            return;
+        }
+
+        $menu = $this->openMenus[$player->getName()];
+        $inventory = $menu->getInventory();
+        
+        $storageSlots = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
+        $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
+        $minionInventory = $minion->getMinionInventory();
+        for ($i = 0; $i < $unlockedSlots; $i++) {
+            $slot = $storageSlots[$i];
+            $inventory->clear($slot);
+        }
+        
+        for ($i = 0; $i < count($minionInventory) && $i < $unlockedSlots; $i++) {
+            $slot = $storageSlots[$i];
+            if (!$minionInventory[$i]->isNull()) {
+                $inventory->setItem($slot, $minionInventory[$i]);
+            }
+        }
+    }
+    private function updateCollectButton(Player $player, BaseMinion $minion): void {
+        if (!isset($this->openMenus[$player->getName()])) {
+            return;
+        }
+
+        $menu = $this->openMenus[$player->getName()];
+        $inventory = $menu->getInventory();
+        
+        $collectButton = VanillaBlocks::CHEST()->asItem();
+        $collectButton->setCustomName("§aCollect All");
+        $collectButton->setLore([
+            "§7Click to collect all items",
+            "§7from this minion's storage!",
+            "",
+            "§7Items in storage: §e" . $this->countStorageItems($minion)
+        ]);
+        
+        $inventory->setItem(48, $collectButton);
     }
 
     private function pickupMinion(Player $player, BaseMinion $minion): void {
