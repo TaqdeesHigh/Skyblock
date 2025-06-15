@@ -15,6 +15,7 @@ use pocketmine\event\player\PlayerItemUseEvent;
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
 use pocketmine\block\VanillaBlocks;
+use pocketmine\block\Air;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\entities\OzzyNPC;
 
@@ -30,6 +31,7 @@ class EventListener implements Listener {
         $player = $event->getPlayer();
         $item = $event->getItem();
         $action = $event->getAction();
+        $block = $event->getBlock();
         
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
@@ -38,15 +40,13 @@ class EventListener implements Listener {
             //------------
             if ($customName === "§6Ozzy's Egg" && $this->plugin->isInEditMode($player->getName())) {
                 $event->cancel();
-                $block = $event->getBlock();
-                $blockPos = $block->getPosition();
-                $spawnVector = $blockPos->add(0.5, 1, 0.5);
-                $spawnPosition = new \pocketmine\world\Position(
-                    $spawnVector->getX(),
-                    $spawnVector->getY(),
-                    $spawnVector->getZ(),
-                    $blockPos->getWorld()
-                );
+                
+                // Get the spawn position on top of the clicked block
+                $spawnPosition = $this->getValidSpawnPosition($block);
+                if ($spawnPosition === null) {
+                    $player->sendMessage("§cCannot place NPC here! Make sure there's enough space above the block.");
+                    return;
+                }
                 
                 if ($this->plugin->getNPCManager()->spawnNPC($player, $spawnPosition)) {
                     $item->setCount($item->getCount() - 1);
@@ -56,40 +56,58 @@ class EventListener implements Listener {
             }
             //------------
 
-            if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
-                $minionType = $item->getNamedTag()->getString("minionType", "");
+            // Check for minion type in NBT
+            $minionType = $item->getNamedTag()->getString("minionType", "");
+            
+            if (!empty($minionType) && $this->plugin->isInEditMode($player->getName())) {
+                $event->cancel();
                 
-                if (!empty($minionType) && $this->plugin->isInEditMode($player->getName())) {
-                    $event->cancel();
-                    $block = $event->getBlock();
-                    $blockPos = $block->getPosition();
-                    $spawnVector = $blockPos->add(0.5, 1, 0.5);
-                    $spawnPosition = new \pocketmine\world\Position(
-                        $spawnVector->getX(),
-                        $spawnVector->getY(),
-                        $spawnVector->getZ(),
-                        $blockPos->getWorld()
-                    );
-                    
-                    if ($this->plugin->getMinionManager()->spawnMinion($player, $spawnPosition, $minionType)) {
-                        $item->setCount($item->getCount() - 1);
-                        $player->getInventory()->setItemInHand($item);
-                    }
+                // Get the spawn position on top of the clicked block
+                $spawnPosition = $this->getValidSpawnPosition($block);
+                if ($spawnPosition === null) {
+                    $player->sendMessage("§cCannot place minion here! Make sure there's enough space above the block.");
                     return;
                 }
+                
+                if ($this->plugin->getMinionManager()->spawnMinion($player, $spawnPosition, $minionType)) {
+                    $item->setCount($item->getCount() - 1);
+                    $player->getInventory()->setItemInHand($item);
+                }
+                return;
             }
 
+            // Check for minion egg
+            $nbt = $item->getNamedTag();
+            
+            if ($nbt->getString("minion_egg", "") === "true") {
+                $event->cancel();
+                
+                // Get the spawn position on top of the clicked block
+                $spawnPosition = $this->getValidSpawnPosition($block);
+                if ($spawnPosition === null) {
+                    $player->sendMessage("§cCannot place minion here! Make sure there's enough space above the block.");
+                    return;
+                }
+                
+                // Try to spawn the minion
+                if ($this->plugin->getMinionManager()->spawnMinionFromEgg($player, $spawnPosition, $item)) {
+                    // Remove the egg from inventory
+                    $item->setCount($item->getCount() - 1);
+                    $player->getInventory()->setItemInHand($item);
+                }
+                return;
+            }
+
+            // Handle location egg
             if ($customName === "§bLocation Egg" && $this->plugin->getNPCManager()->isInPlacingMode($player->getName())) {
                 $event->cancel();
-                $block = $event->getBlock();
-                $blockPos = $block->getPosition();
-                $spawnVector = $blockPos->add(0.5, 1, 0.5);
-                $spawnPosition = new \pocketmine\world\Position(
-                    $spawnVector->getX(),
-                    $spawnVector->getY(),
-                    $spawnVector->getZ(),
-                    $blockPos->getWorld()
-                );
+                
+                // Get the spawn position on top of the clicked block
+                $spawnPosition = $this->getValidSpawnPosition($block);
+                if ($spawnPosition === null) {
+                    $player->sendMessage("§cCannot place location marker here! Make sure there's enough space above the block.");
+                    return;
+                }
                 
                 if ($this->plugin->getNPCManager()->handleLocationEggUse($player, $spawnPosition)) {
                     $item->setCount($item->getCount() - 1);
@@ -98,6 +116,39 @@ class EventListener implements Listener {
                 return;
             }
         }
+    }
+
+    /**
+     * Get a valid spawn position on top of the clicked block
+     * Returns null if the position is not suitable
+     */
+    private function getValidSpawnPosition(\pocketmine\block\Block $block): ?\pocketmine\world\Position {
+        $blockPos = $block->getPosition();
+        $world = $blockPos->getWorld();
+        
+        // Check if the clicked block is solid (not air)
+        if ($block instanceof Air) {
+            return null;
+        }
+        
+        // Calculate spawn position on top of the block (centered)
+        $spawnX = floor($blockPos->getX()) + 0.5;
+        $spawnY = $blockPos->getY() + 1;
+        $spawnZ = floor($blockPos->getZ()) + 0.5;
+        
+        // Check if there's enough space (2 blocks high for entities)
+        $checkPos1 = new \pocketmine\world\Position($spawnX, $spawnY, $spawnZ, $world);
+        $checkPos2 = new \pocketmine\world\Position($spawnX, $spawnY + 1, $spawnZ, $world);
+        
+        $block1 = $world->getBlock($checkPos1);
+        $block2 = $world->getBlock($checkPos2);
+        
+        // Make sure both positions are air blocks
+        if (!($block1 instanceof Air) || !($block2 instanceof Air)) {
+            return null;
+        }
+        
+        return new \pocketmine\world\Position($spawnX, $spawnY, $spawnZ, $world);
     }
 
     public function onEntitySpawn(EntitySpawnEvent $event): void {

@@ -362,6 +362,21 @@ class MinionInventoryManager {
     }
 
     private function pickupMinion(Player $player, BaseMinion $minion): void {
-        // TODO: Move this to MinionSpawnManager or create MinionPickupManager
+        $spawnManager = new MinionSpawnManager($this->plugin, $this->plugin->getMinionManager()->getDataManager());
+        $minionEgg = $spawnManager->createMinionEgg($minion->getMinionType(), $minion->getLevel());
+        
+        $this->collectMinionItems($player, $minion);
+        if ($player->getInventory()->canAddItem($minionEgg)) {
+            $player->getInventory()->addItem($minionEgg);
+            $player->sendMessage("§aMinion picked up successfully!");
+        } else {
+            $player->getWorld()->dropItem($player->getPosition(), $minionEgg);
+            $player->sendMessage("§eMinion egg dropped on the ground (inventory full)!");
+        }
+        $dataManager = $this->plugin->getMinionManager()->getDataManager();
+        if (method_exists($dataManager, 'removeMinionFromData')) {
+            $dataManager->removeMinionFromData($player->getName(), $minion);
+        }
+        $minion->flagForDespawn();
     }
 }

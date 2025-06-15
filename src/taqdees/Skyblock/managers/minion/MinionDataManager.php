@@ -124,6 +124,7 @@ class MinionDataManager {
                 $this->playerMinions[$playerName] = array_values($this->playerMinions[$playerName]);
             }
         }
+        
         $minions = $this->minionConfig->get("minions", []);
         if (isset($minions[$playerName])) {
             $minionPos = $minion->getPosition();

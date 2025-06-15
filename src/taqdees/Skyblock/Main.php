@@ -35,6 +35,7 @@ class Main extends PluginBase {
     private AdminCommand $adminCommand;
     private IslandCommand $islandCommand;
     private MinionManager $minionManager;
+    private array $adminEditMode = [];
 
     public function onEnable(): void {
         $this->saveDefaultConfig();

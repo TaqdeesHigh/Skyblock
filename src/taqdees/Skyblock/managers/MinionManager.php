@@ -35,8 +35,16 @@ class MinionManager {
         return $this->spawnManager->createMinionEgg($minionType);
     }
 
-    public function spawnMinion(Player $player, Position $position, string $minionType): bool {
-        return $this->spawnManager->spawnMinion($player, $position, $minionType);
+    public function spawnMinionFromEgg(Player $player, Position $position, \pocketmine\item\Item $egg): bool {
+        return $this->spawnManager->spawnMinionFromEgg($player, $position, $egg);
+    }
+
+    public function createMinionEggWithLevel(string $minionType, int $level): \pocketmine\item\Item {
+        return $this->spawnManager->createMinionEgg($minionType, $level);
+    }
+
+    public function getDataManager(): MinionDataManager {
+        return $this->dataManager;
     }
 
     public function openMinionMenu(Player $player, BaseMinion $minion): void {
