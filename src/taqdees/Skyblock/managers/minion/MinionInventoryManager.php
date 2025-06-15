@@ -26,14 +26,6 @@ class MinionInventoryManager {
         $this->upgradeManager = $upgradeManager;
     }
 
-    // (will be used later.)
-    public function openMinionMenu(Player $player, BaseMinion $minion): void {
-        $player->sendMessage("§6=== " . $minion->getDisplayName() . " ===");
-        $player->sendMessage("§7Type: §e" . $minion->getMinionType());
-        $player->sendMessage("§7Level: §a" . $minion->getLevel() . "/" . $minion->getMaxLevel());
-        $player->sendMessage("§7Right-click to upgrade (if you have resources)");
-    }
-
     public function openMinionInventoryMenu(Player $player, BaseMinion $minion): void {
         $menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
         $menu->setName($minion->getDisplayName());
