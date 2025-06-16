@@ -14,15 +14,17 @@ use muqsit\invmenu\transaction\InvMenuTransaction;
 use muqsit\invmenu\transaction\InvMenuTransactionResult;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\traits\PluginOwned;
+use taqdees\Skyblock\crafting\RecipeRegistry;
+use taqdees\Skyblock\crafting\MultiPatternRecipe;
 
 class CraftingManager {
     use PluginOwned;
 
-    private array $recipes = [];
+    private RecipeRegistry $recipeRegistry;
 
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
-        $this->initializeRecipes();
+        $this->recipeRegistry = RecipeRegistry::getInstance();
     }
 
     private function initializeRecipes(): void {
@@ -53,6 +55,9 @@ class CraftingManager {
         $craftingSlots = [11, 12, 13, 20, 21, 22, 29, 30, 31];
         $resultSlot = 25; 
         $this->setupHypixelUI($inventory);
+        $menu->setInventoryCloseListener(function(Player $player, \pocketmine\inventory\Inventory $inventory) use ($craftingSlots): void {
+            $this->returnCraftingItems($player, $inventory, $craftingSlots);
+        });
         
         $menu->setListener(function(InvMenuTransaction $transaction) use ($craftingSlots, $resultSlot): InvMenuTransactionResult {
             $player = $transaction->getPlayer();
@@ -73,6 +78,20 @@ class CraftingManager {
         });
         
         $menu->send($player);
+    }
+
+    private function returnCraftingItems(Player $player, \pocketmine\inventory\Inventory $inventory, array $craftingSlots): void {
+        foreach ($craftingSlots as $slot) {
+            $item = $inventory->getItem($slot);
+            if (!$item->isNull()) {
+                if ($player->getInventory()->canAddItem($item)) {
+                    $player->getInventory()->addItem($item);
+                } else {
+                    $player->getWorld()->dropItem($player->getPosition(), $item);
+                    $player->sendMessage("§eYour inventory was full, so items were dropped!");
+                }
+            }
+        }
     }
 
     private function setupHypixelUI(\pocketmine\inventory\Inventory $inventory): void {
@@ -141,7 +160,6 @@ class CraftingManager {
         if ($resultItem->isNull()) {
             return $transaction->discard();
         }
-        
         if (!$player->getInventory()->canAddItem($resultItem)) {
             $player->sendMessage("§cYour inventory is full!");
             return $transaction->discard();
@@ -149,6 +167,8 @@ class CraftingManager {
         $player->getInventory()->addItem($resultItem);
         $this->consumeCraftingMaterials($inventory, $craftingSlots);
         $inventory->setItem($resultSlot, VanillaItems::AIR());
+        $player->getNetworkSession()->getInvManager()->syncContents($player->getInventory());
+        $player->getNetworkSession()->getInvManager()->syncContents($inventory);
         $this->updateCraftingResult($player, $inventory);
         
         return $transaction->discard();
@@ -173,42 +193,102 @@ class CraftingManager {
         }
         $result = $this->getRecipeResult($craftingGrid);
         $inventory->setItem(25, $result ?? VanillaItems::AIR());
+        $player->getNetworkSession()->getInvManager()->syncContents($inventory);
     }
 
     private function getRecipeResult(array $craftingGrid): ?Item {
-        foreach ($this->recipes as $recipe) {
-            if ($this->matchesRecipe($craftingGrid, $recipe['pattern'])) {
-                return clone $recipe['result'];
+        $recipes = $this->recipeRegistry->getAllRecipes();
+        
+        foreach ($recipes as $recipe) {
+            if ($recipe instanceof MultiPatternRecipe) {
+                foreach ($recipe->getPatterns() as $pattern) {
+                    if ($this->matchesRecipeSimple($craftingGrid, $pattern)) {
+                        return $recipe->getResult();
+                    }
+                }
+            } else {
+                if ($this->matchesRecipeSimple($craftingGrid, $recipe->getPattern())) {
+                    return $recipe->getResult();
+                }
             }
         }
         return null;
     }
 
-    private function matchesRecipe(array $craftingGrid, array $pattern): bool {
-        $grid2D = [];
+    private function matchesRecipeSimple(array $craftingGrid, array $pattern): bool {
+        $gridItems = $this->normalizeGrid($craftingGrid);
+        $patternItems = $this->normalizePattern($pattern);
+        return $this->arraysMatch($gridItems, $patternItems);
+    }
+
+    private function normalizeGrid(array $craftingGrid): array {
+        $grid = [];
         for ($i = 0; $i < 3; $i++) {
             for ($j = 0; $j < 3; $j++) {
-                $grid2D[$i][$j] = $craftingGrid[$i * 3 + $j];
+                $item = $craftingGrid[$i * 3 + $j];
+                $grid[$i][$j] = ($item === null || $item->isNull()) ? null : $item->getTypeId();
             }
         }
         
-        for ($i = 0; $i < 3; $i++) {
-            for ($j = 0; $j < 3; $j++) {
-                $patternItem = $pattern[$i][$j] ?? null;
-                $gridItem = $grid2D[$i][$j];
-                
-                if ($patternItem === null && $gridItem !== null && !$gridItem->isNull()) {
-                    return false;
+        return $this->trimGrid($grid);
+    }
+
+    private function normalizePattern(array $pattern): array {
+        $grid = [];
+        for ($i = 0; $i < count($pattern); $i++) {
+            for ($j = 0; $j < count($pattern[$i]); $j++) {
+                $item = $pattern[$i][$j];
+                $grid[$i][$j] = ($item === null) ? null : $item->getTypeId();
+            }
+        }
+        
+        return $this->trimGrid($grid);
+    }
+
+    private function trimGrid(array $grid): array {
+        $minRow = 3; $maxRow = -1;
+        $minCol = 3; $maxCol = -1;
+        
+        for ($i = 0; $i < count($grid); $i++) {
+            for ($j = 0; $j < count($grid[$i]); $j++) {
+                if ($grid[$i][$j] !== null) {
+                    $minRow = min($minRow, $i);
+                    $maxRow = max($maxRow, $i);
+                    $minCol = min($minCol, $j);
+                    $maxCol = max($maxCol, $j);
                 }
-                
-                if ($patternItem !== null) {
-                    if ($gridItem === null || $gridItem->isNull()) {
-                        return false;
-                    }
-                    
-                    if ($gridItem->getTypeId() !== $patternItem->getTypeId()) {
-                        return false;
-                    }
+            }
+        }
+        
+        if ($minRow > $maxRow) {
+            return [];
+        }
+        
+        $result = [];
+        for ($i = $minRow; $i <= $maxRow; $i++) {
+            $row = [];
+            for ($j = $minCol; $j <= $maxCol; $j++) {
+                $row[] = $grid[$i][$j] ?? null;
+            }
+            $result[] = $row;
+        }
+        
+        return $result;
+    }
+
+    private function arraysMatch(array $grid1, array $grid2): bool {
+        if (count($grid1) !== count($grid2)) {
+            return false;
+        }
+        
+        for ($i = 0; $i < count($grid1); $i++) {
+            if (count($grid1[$i]) !== count($grid2[$i])) {
+                return false;
+            }
+            
+            for ($j = 0; $j < count($grid1[$i]); $j++) {
+                if ($grid1[$i][$j] !== $grid2[$i][$j]) {
+                    return false;
                 }
             }
         }
