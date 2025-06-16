@@ -13,6 +13,7 @@ use muqsit\invmenu\type\InvMenuTypeIds;
 use muqsit\invmenu\transaction\InvMenuTransaction;
 use muqsit\invmenu\transaction\InvMenuTransactionResult;
 use taqdees\Skyblock\Main;
+use taqdees\Skyblock\crafting\Recipe; 
 use taqdees\Skyblock\traits\PluginOwned;
 use taqdees\Skyblock\crafting\RecipeRegistry;
 use taqdees\Skyblock\crafting\MultiPatternRecipe;
@@ -173,17 +174,7 @@ class CraftingManager {
         
         return $transaction->discard();
     }
-
-    private function consumeCraftingMaterials(\pocketmine\inventory\Inventory $inventory, array $craftingSlots): void {
-        foreach ($craftingSlots as $slot) {
-            $item = $inventory->getItem($slot);
-            if (!$item->isNull()) {
-                $item->setCount($item->getCount() - 1);
-                $inventory->setItem($slot, $item->getCount() > 0 ? $item : VanillaItems::AIR());
-            }
-        }
-    }
-
+    
     private function updateCraftingResult(Player $player, \pocketmine\inventory\Inventory $inventory): void {
         $craftingGrid = [];
         $craftingSlots = [11, 12, 13, 20, 21, 22, 29, 30, 31];
@@ -216,10 +207,157 @@ class CraftingManager {
     }
 
     private function matchesRecipeSimple(array $craftingGrid, array $pattern): bool {
-        $gridItems = $this->normalizeGrid($craftingGrid);
-        $patternItems = $this->normalizePattern($pattern);
-        return $this->arraysMatch($gridItems, $patternItems);
+        $gridItems = $this->normalizeGridWithCount($craftingGrid);
+        $patternItems = $this->normalizePatternWithCount($pattern);
+        return $this->arraysMatchWithCount($gridItems, $patternItems);
     }
+
+    private function normalizeGridWithCount(array $craftingGrid): array {
+        $grid = [];
+        for ($i = 0; $i < 3; $i++) {
+            for ($j = 0; $j < 3; $j++) {
+                $item = $craftingGrid[$i * 3 + $j];
+                if ($item === null || $item->isNull()) {
+                    $grid[$i][$j] = null;
+                } else {
+                    $grid[$i][$j] = [
+                        'type' => $item->getTypeId(),
+                        'count' => $item->getCount()
+                    ];
+                }
+            }
+        }
+        
+        return $this->trimGridWithCount($grid);
+    }
+
+    private function normalizePatternWithCount(array $pattern): array {
+        $grid = [];
+        for ($i = 0; $i < count($pattern); $i++) {
+            for ($j = 0; $j < count($pattern[$i]); $j++) {
+                $item = $pattern[$i][$j];
+                if ($item === null) {
+                    $grid[$i][$j] = null;
+                } else {
+                    $grid[$i][$j] = [
+                        'type' => $item->getTypeId(),
+                        'count' => $item->getCount()
+                    ];
+                }
+            }
+        }
+        
+        return $this->trimGridWithCount($grid);
+    }
+
+    private function trimGridWithCount(array $grid): array {
+        $minRow = 3; $maxRow = -1;
+        $minCol = 3; $maxCol = -1;
+        
+        for ($i = 0; $i < count($grid); $i++) {
+            for ($j = 0; $j < count($grid[$i]); $j++) {
+                if ($grid[$i][$j] !== null) {
+                    $minRow = min($minRow, $i);
+                    $maxRow = max($maxRow, $i);
+                    $minCol = min($minCol, $j);
+                    $maxCol = max($maxCol, $j);
+                }
+            }
+        }
+        
+        if ($minRow > $maxRow) {
+            return [];
+        }
+        
+        $result = [];
+        for ($i = $minRow; $i <= $maxRow; $i++) {
+            $row = [];
+            for ($j = $minCol; $j <= $maxCol; $j++) {
+                $row[] = $grid[$i][$j] ?? null;
+            }
+            $result[] = $row;
+        }
+        
+        return $result;
+    }
+
+    private function arraysMatchWithCount(array $grid1, array $grid2): bool {
+        if (count($grid1) !== count($grid2)) {
+            return false;
+        }
+        
+        for ($i = 0; $i < count($grid1); $i++) {
+            if (count($grid1[$i]) !== count($grid2[$i])) {
+                return false;
+            }
+            
+            for ($j = 0; $j < count($grid1[$i]); $j++) {
+                $item1 = $grid1[$i][$j];
+                $item2 = $grid2[$i][$j];
+                
+                if ($item1 === null && $item2 === null) {
+                    continue;
+                }
+                
+                if ($item1 === null || $item2 === null) {
+                    return false;
+                }
+                
+                if ($item1['type'] !== $item2['type'] || $item1['count'] < $item2['count']) {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
+    }
+
+    private function consumeCraftingMaterials(\pocketmine\inventory\Inventory $inventory, array $craftingSlots): void {
+        $craftingGrid = [];
+        for ($i = 0; $i < 9; $i++) {
+            $item = $inventory->getItem($craftingSlots[$i]);
+            $craftingGrid[] = $item->isNull() ? null : $item;
+        }
+        
+        $recipe = $this->getCurrentRecipe($craftingGrid);
+        if ($recipe === null) return;
+        
+        $pattern = $recipe->getPattern();
+        $patternItems = $this->normalizePatternWithCount($pattern);
+        $patternIndex = 0;
+        for ($i = 0; $i < 3; $i++) {
+            for ($j = 0; $j < 3; $j++) {
+                $slotIndex = $i * 3 + $j;
+                $item = $inventory->getItem($craftingSlots[$slotIndex]);
+                
+                if (!$item->isNull() && isset($patternItems[$i][$j]) && $patternItems[$i][$j] !== null) {
+                    $requiredCount = $patternItems[$i][$j]['count'];
+                    $newCount = $item->getCount() - $requiredCount;
+                    $inventory->setItem($craftingSlots[$slotIndex], $newCount > 0 ? $item->setCount($newCount) : VanillaItems::AIR());
+                }
+            }
+        }
+    }
+
+    private function getCurrentRecipe(array $craftingGrid): ?Recipe {
+        $recipes = $this->recipeRegistry->getAllRecipes();
+        
+        foreach ($recipes as $recipe) {
+            if ($recipe instanceof MultiPatternRecipe) {
+                foreach ($recipe->getPatterns() as $pattern) {
+                    if ($this->matchesRecipeSimple($craftingGrid, $pattern)) {
+                        return $recipe;
+                    }
+                }
+            } else {
+                if ($this->matchesRecipeSimple($craftingGrid, $recipe->getPattern())) {
+                    return $recipe;
+                }
+            }
+        }
+        return null;
+    }
+
 
     private function normalizeGrid(array $craftingGrid): array {
         $grid = [];

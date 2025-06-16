@@ -7,6 +7,8 @@ namespace taqdees\Skyblock\crafting;
 use taqdees\Skyblock\crafting\items\StickRecipe;
 use taqdees\Skyblock\crafting\items\WorkbenchRecipe;
 use taqdees\Skyblock\crafting\items\ChestRecipe;
+use taqdees\Skyblock\crafting\items\CobblestoneMinonRecipe;
+use taqdees\Skyblock\crafting\items\WheatMinionRecipe;
 
 class RecipeRegistry {
     private array $recipes = [];
@@ -27,11 +29,14 @@ class RecipeRegistry {
         $this->addRecipe(new StickRecipe());
         $this->addRecipe(new WorkbenchRecipe());
         $this->addRecipe(new ChestRecipe());
-        
+        $this->addRecipe(new CobblestoneMinonRecipe());
+        $this->addRecipe(new WheatMinionRecipe());
     }
 
     private function addRecipe(Recipe $recipe): void {
-        $this->recipes[] = $recipe;
+        if ($recipe->isValid()) {
+            $this->recipes[] = $recipe;
+        }
     }
 
     public function getAllRecipes(): array {

@@ -7,10 +7,10 @@ namespace taqdees\Skyblock\crafting;
 use pocketmine\item\Item;
 
 abstract class Recipe {
-    protected array $pattern;
-    protected Item $result;
-    protected string $name;
-    protected array $description;
+    protected array $pattern = [];
+    protected ?Item $result = null; 
+    protected string $name = "";
+    protected array $description = []; 
 
     public function __construct() {
         $this->initializeRecipe();
@@ -22,8 +22,8 @@ abstract class Recipe {
         return $this->pattern;
     }
 
-    public function getResult(): Item {
-        return clone $this->result;
+    public function getResult(): ?Item {
+        return $this->result !== null ? clone $this->result : null;
     }
 
     public function getName(): string {
@@ -48,5 +48,9 @@ abstract class Recipe {
 
     protected function setDescription(array $description): void {
         $this->description = $description;
+    }
+
+    public function isValid(): bool {
+        return !empty($this->pattern) && $this->result !== null && !empty($this->name);
     }
 }
