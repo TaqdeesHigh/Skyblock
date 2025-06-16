@@ -31,6 +31,16 @@ trait MinionWorkTrait {
     protected int $breakingStage = 0;
     protected int $lastBreakingStage = -1;
 
+    public function onUpdate(int $currentTick): bool {
+        $this->handleMovement();
+        $this->handleAutoSave($currentTick);
+        $this->handleWork($currentTick);
+        $result = parent::onUpdate($currentTick);
+        $this->enforcePosition();
+        
+        return $result;
+    }
+
     protected function updateWorkStats(): void {
         $this->workCooldown = max(5, 20 - ($this->level - 1) * 2);
         $this->breakTime = max(10, 30 - ($this->level - 1) * 2);
