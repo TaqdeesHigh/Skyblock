@@ -19,6 +19,7 @@ use taqdees\Skyblock\commands\IslandCommand;
 use taqdees\Skyblock\commands\AdminCommand;
 use taqdees\Skyblock\listeners\EventListener;
 use taqdees\Skyblock\managers\IslandManager;
+use taqdees\Skyblock\managers\CraftingManager;
 use taqdees\Skyblock\managers\DataManager;
 use taqdees\Skyblock\managers\NPCManager;
 use taqdees\Skyblock\entities\OzzyNPC;
@@ -35,6 +36,7 @@ class Main extends PluginBase {
     private AdminCommand $adminCommand;
     private IslandCommand $islandCommand;
     private MinionManager $minionManager;
+    private CraftingManager $craftingManager;
     private array $adminEditMode = [];
 
     public function onEnable(): void {
@@ -75,6 +77,7 @@ class Main extends PluginBase {
         $this->adminCommand = new AdminCommand($this);
         $this->islandCommand = new IslandCommand($this, $this->islandManager);
         $this->minionManager = new MinionManager($this);
+        $this->craftingManager = new CraftingManager($this); 
     }
 
     private function registerListeners(): void {
@@ -126,6 +129,10 @@ class Main extends PluginBase {
 
     public function getMinionManager(): MinionManager {
         return $this->minionManager;
+    }
+
+    public function getCraftingManager(): CraftingManager {
+        return $this->craftingManager;
     }
 
     public function getConfigValue(string $path, $default = null) {

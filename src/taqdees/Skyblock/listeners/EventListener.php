@@ -12,9 +12,9 @@ use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntitySpawnEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
+use pocketmine\block\VanillaBlocks;
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
-use pocketmine\block\VanillaBlocks;
 use pocketmine\block\Air;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\entities\OzzyNPC;
@@ -32,6 +32,12 @@ class EventListener implements Listener {
         $item = $event->getItem();
         $action = $event->getAction();
         $block = $event->getBlock();
+        
+        if ($block->getTypeId() === VanillaBlocks::CRAFTING_TABLE()->getTypeId()) {
+            $event->cancel();
+            $this->plugin->getCraftingManager()->openCraftingUI($player);
+            return;
+        }
         
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
