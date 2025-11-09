@@ -1,18 +1,21 @@
-Copyright (c) 2025 TaqdeesHigh
+MIT License
 
-Permission is hereby granted to any person to view, download, study, and modify this software and its source code for personal, educational, or development use, subject to the following conditions:
+Copyright (c) 2024 Taqdees
 
-1. Non-Commercial Use Only 
-   This software may not be used, deployed, hosted, or otherwise made available in any commercial or public-facing project, including but not limited to live Minecraft servers, monetized services, or paid products, without explicit written permission or a commercial license from the copyright holder.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-2. Commercial Use Requires License 
-   If you wish to use this software in a production environment (e.g., a public or monetized Minecraft server), you must obtain a commercial license or pay a usage fee as agreed with the author.  
-   Contact: taqdees678@gmail.com
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
 
-3. No Warranty 
-   This software is provided "as is", without warranty of any kind, express or implied.
-
-4. License Modifications
-   The copyright holder reserves the right to relicense this project under a different open-source or commercial license in the future.
-
-By using, modifying, or distributing this software, you agree to be bound by these terms.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.

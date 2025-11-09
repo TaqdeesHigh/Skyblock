@@ -21,7 +21,19 @@ trait MinionInventoryTrait {
     }
 
     public function hasInventorySpace(): bool {
-        return count($this->minionInventory) < $this->getMaxInventorySlots();
+        $maxSlots = $this->getMaxInventorySlots();
+        
+        if (count($this->minionInventory) < $maxSlots) {
+            return true;
+        }
+        
+        foreach ($this->minionInventory as $item) {
+            if ($item->getCount() < $item->getMaxStackSize()) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     public function getInventoryItemCount(): int {
