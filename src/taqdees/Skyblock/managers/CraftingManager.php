@@ -191,6 +191,10 @@ class CraftingManager {
         $recipes = $this->recipeRegistry->getAllRecipes();
         
         foreach ($recipes as $recipe) {
+            if (!$this->canCraftInUI($recipe)) {
+                continue;
+            }
+            
             if ($recipe instanceof MultiPatternRecipe) {
                 foreach ($recipe->getPatterns() as $pattern) {
                     if ($this->matchesRecipeSimple($craftingGrid, $pattern)) {
@@ -433,4 +437,12 @@ class CraftingManager {
         
         return true;
     }
+
+    private function canCraftInUI(Recipe $recipe): bool {
+        if ($recipe->getName() === "Crafting Table") {
+            return false;
+        }
+        return true;
+    }
+
 }

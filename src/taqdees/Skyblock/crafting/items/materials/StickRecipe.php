@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace taqdees\Skyblock\crafting\items;
+namespace taqdees\Skyblock\crafting\items\materials;
 
 use pocketmine\item\VanillaItems;
 use pocketmine\block\VanillaBlocks;

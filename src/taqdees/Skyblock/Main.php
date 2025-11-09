@@ -27,6 +27,7 @@ use taqdees\Skyblock\managers\MinionManager;
 use taqdees\Skyblock\entities\MinionTypes\CobblestoneMinion;
 use taqdees\Skyblock\entities\MinionTypes\WheatMinion;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use \taqdees\Skyblock\minions\MinionCropHandler;
 
 class Main extends PluginBase {
 
@@ -37,6 +38,7 @@ class Main extends PluginBase {
     private IslandCommand $islandCommand;
     private MinionManager $minionManager;
     private CraftingManager $craftingManager;
+    private MinionCropHandler $minionCropHandler;
     private array $adminEditMode = [];
 
     public function onEnable(): void {
@@ -76,6 +78,7 @@ class Main extends PluginBase {
         $this->npcManager = new NPCManager($this);
         $this->adminCommand = new AdminCommand($this);
         $this->islandCommand = new IslandCommand($this, $this->islandManager);
+        $this->minionCropHandler = new MinionCropHandler($this);
         $this->minionManager = new MinionManager($this);
         $this->craftingManager = new CraftingManager($this); 
     }
@@ -133,6 +136,10 @@ class Main extends PluginBase {
 
     public function getCraftingManager(): CraftingManager {
         return $this->craftingManager;
+    }
+
+    public function getMinionCropHandler(): MinionCropHandler {
+        return $this->minionCropHandler;
     }
 
     public function getConfigValue(string $path, $default = null) {

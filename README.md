@@ -29,9 +29,7 @@ If you'd like to help, feel free to fork the repo, create a branch, and open a p
 
 ## License
 
-This project is open-source but **not free for commercial use**. See the [LICENSE](./LICENSE) file for full details.
-
-To use this plugin on a public or monetized Minecraft server, please contact me at taqdees678@gmail.com for licensing options.
+See the [LICENSE](./LICENSE) file for full details.
 
 ---
 
@@ -45,5 +43,3 @@ To use this plugin on a public or monetized Minecraft server, please contact me 
 This plugin is actively being worked on. Watch the repository to stay up-to-date with progress and releases.
 
 ---
-
-**Made for the PocketMine-MP 5.x ecosystem.**

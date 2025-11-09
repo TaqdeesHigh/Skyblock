@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace taqdees\Skyblock\crafting\items;
+namespace taqdees\Skyblock\crafting\items\minions;
 
 use taqdees\Skyblock\crafting\Recipe;
 use pocketmine\item\VanillaItems;

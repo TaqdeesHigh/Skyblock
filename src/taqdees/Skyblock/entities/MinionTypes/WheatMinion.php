@@ -24,7 +24,6 @@ class WheatMinion extends BaseMinion {
         
         if ($block instanceof Wheat) {
             $age = $block->getAge();
-            $this->plugin->getLogger()->info("Found wheat with age: " . $age);
             return $age >= 7;
         }
         
@@ -32,12 +31,10 @@ class WheatMinion extends BaseMinion {
         $canPlant = $block->getTypeId() === VanillaBlocks::AIR()->getTypeId() && 
                    $farmlandBlock->getTypeId() === VanillaBlocks::FARMLAND()->getTypeId();
         
-        
         return $canPlant;
     }
 
     protected function findWork(): void {
-        
         if ($this->isInventoryFull()) {
             return;
         }
@@ -45,7 +42,8 @@ class WheatMinion extends BaseMinion {
         $world = $this->getWorld();
         $pos = $this->getPosition();
         $workPositions = [];
-        $platformY = floor($pos->y); 
+        $platformY = floor($pos->y);
+        
         for ($y = 0; $y >= -1; $y--) {
             for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
                 for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
@@ -85,32 +83,52 @@ class WheatMinion extends BaseMinion {
         $world = $this->getWorld();
         $blockPos = $this->targetBlock;
         $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+        
         if ($block instanceof Wheat && $block->getAge() >= 7) {
+            // Unregister the crop before breaking
+            $this->plugin->getMinionCropHandler()->unregisterMinionCrop(
+                $blockPos, 
+                $world->getFolderName()
+            );
+            
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
+            
             $wheat = VanillaItems::WHEAT();
             $seeds = VanillaItems::WHEAT_SEEDS();
             
             $wheatAdded = $this->addItemToInventory($wheat);
             $seedsAdded = $this->addItemToInventory($seeds);
+            
             if (!$wheatAdded) {
                 $world->dropItem($blockPos, $wheat);
             }
             if (!$seedsAdded) {
                 $world->dropItem($blockPos, $seeds);
             }
+            
+            // Replant and register as minion crop
             $newWheat = VanillaBlocks::WHEAT();
             $newWheat->setAge(0);
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, $newWheat);
             
-            $this->plugin->getLogger()->info("Wheat harvested and replanted");
+            // Register the new crop
+            $this->plugin->getMinionCropHandler()->registerMinionCrop(
+                $blockPos, 
+                $world->getFolderName()
+            );
         }
         else if ($block->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
             $farmlandBlock = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y - 1, (int)$blockPos->z);
             if ($farmlandBlock->getTypeId() === VanillaBlocks::FARMLAND()->getTypeId()) {
-                $this->plugin->getLogger()->info("Planting wheat on farmland");
                 $newWheat = VanillaBlocks::WHEAT();
                 $newWheat->setAge(0);
                 $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, $newWheat);
+                
+                // Register as minion crop
+                $this->plugin->getMinionCropHandler()->registerMinionCrop(
+                    $blockPos, 
+                    $world->getFolderName()
+                );
             }
         }
     }
@@ -119,6 +137,7 @@ class WheatMinion extends BaseMinion {
         $world = $this->getWorld();
         $pos = $this->getPosition();
         $platformY = floor($pos->y - 1);
+        
         for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
             for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
                 $blockPos = new Vector3(
@@ -130,13 +149,39 @@ class WheatMinion extends BaseMinion {
                 $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
                 if ($block->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
                     $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::FARMLAND());
+                    
                     $wheatBlock = VanillaBlocks::WHEAT();
                     $wheatBlock->setAge(0);
                     $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z, $wheatBlock);
+                    
+                    // Register as minion crop
+                    $cropPos = new Vector3(
+                        floor($pos->x) + $x,
+                        $platformY + 1,
+                        floor($pos->z) + $z
+                    );
+                    $this->plugin->getMinionCropHandler()->registerMinionCrop(
+                        $cropPos,
+                        $world->getFolderName()
+                    );
                 }
             }
         }
     }
+
+    public function onDispose(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        
+        $this->plugin->getMinionCropHandler()->clearMinionArea(
+            $pos,
+            $this->workRadius + 1,
+            $world->getFolderName()
+        );
+        
+        parent::onDispose();
+    }
+
 
     public function getSaveId(): string {
         return "wheat_minion";
