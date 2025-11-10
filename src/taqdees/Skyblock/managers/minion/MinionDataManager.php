@@ -8,14 +8,29 @@ use pocketmine\utils\Config;
 use pocketmine\world\Position;
 use taqdees\Skyblock\Main;
 use taqdees\Skyblock\entities\BaseMinion;
-use taqdees\Skyblock\entities\MinionTypes\CobblestoneMinion;
-use taqdees\Skyblock\entities\MinionTypes\WheatMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\CobblestoneMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\CoalMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\IronMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\GoldMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\DiamondMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\LapisMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\EmeraldMinion;
+use taqdees\Skyblock\entities\MinionTypes\mining\RedstoneMinion;
+use taqdees\Skyblock\entities\MinionTypes\farming\WheatMinion;
+use taqdees\Skyblock\entities\MinionTypes\farming\CarrotMinion;
+use taqdees\Skyblock\entities\MinionTypes\farming\PotatoMinion;
+use taqdees\Skyblock\entities\MinionTypes\farming\PumpkinMinion;
+use taqdees\Skyblock\entities\MinionTypes\farming\MelonMinion;
+use taqdees\Skyblock\entities\MinionTypes\foraging\OakMinion;
+use taqdees\Skyblock\entities\MinionTypes\foraging\SpruceMinion;
+use taqdees\Skyblock\entities\MinionTypes\foraging\BirchMinion;
+use taqdees\Skyblock\entities\MinionTypes\foraging\DarkOakMinion;
+use taqdees\Skyblock\entities\MinionTypes\foraging\AcaciaMinion;
 
 class MinionDataManager {
 
     private Main $plugin;
     private Config $minionConfig;
-    /** @var array<string, array<BaseMinion>> */
     private array $playerMinions = [];
 
     public function __construct(Main $plugin) {
@@ -33,8 +48,40 @@ class MinionDataManager {
         switch (strtolower($type)) {
             case "cobblestone":
                 return new CobblestoneMinion($this->plugin, $location, "cobblestone");
+            case "coal":
+                return new CoalMinion($this->plugin, $location, "coal");
+            case "iron":
+                return new IronMinion($this->plugin, $location, "iron");
+            case "gold":
+                return new GoldMinion($this->plugin, $location, "gold");
+            case "diamond":
+                return new DiamondMinion($this->plugin, $location, "diamond");
+            case "lapis":
+                return new LapisMinion($this->plugin, $location, "lapis");
+            case "emerald":
+                return new EmeraldMinion($this->plugin, $location, "emerald");
+            case "redstone":
+                return new RedstoneMinion($this->plugin, $location, "redstone");
             case "wheat":
                 return new WheatMinion($this->plugin, $location, "wheat");
+            case "carrot":
+                return new CarrotMinion($this->plugin, $location, "carrot");
+            case "potato":
+                return new PotatoMinion($this->plugin, $location, "potato");
+            case "pumpkin":
+                return new PumpkinMinion($this->plugin, $location, "pumpkin");
+            case "melon":
+                return new MelonMinion($this->plugin, $location, "melon");
+            case "oak":
+                return new OakMinion($this->plugin, $location, "oak");
+            case "spruce":
+                return new SpruceMinion($this->plugin, $location, "spruce");
+            case "birch":
+                return new BirchMinion($this->plugin, $location, "birch");
+            case "dark_oak":
+                return new DarkOakMinion($this->plugin, $location, "dark_oak");
+            case "acacia":
+                return new AcaciaMinion($this->plugin, $location, "acacia");
             default:
                 return null;
         }

@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace taqdees\Skyblock\entities\MinionTypes;
+namespace taqdees\Skyblock\entities\MinionTypes\foraging;
 
 use pocketmine\block\VanillaBlocks;
 use pocketmine\item\VanillaItems;
@@ -11,10 +11,10 @@ use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
 
-class CobblestoneMinion extends BaseMinion {
+class OakMinion extends BaseMinion {
 
     protected function initializeProfession(): ?Profession {
-        return ProfessionRegistry::get("mining");
+        return ProfessionRegistry::get("woodcutting");
     }
 
     protected function canWorkOnBlock(Vector3 $blockPos): bool {
@@ -28,7 +28,7 @@ class CobblestoneMinion extends BaseMinion {
             return false;
         }
         
-        return $block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId();
+        return $block->getTypeId() === VanillaBlocks::OAK_LOG()->getTypeId();
     }
 
     protected function doWork(): void {
@@ -38,12 +38,12 @@ class CobblestoneMinion extends BaseMinion {
         $blockPos = $this->targetBlock;
         $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
         
-        if ($block->getTypeId() === VanillaBlocks::COBBLESTONE()->getTypeId()) {
+        if ($block->getTypeId() === VanillaBlocks::OAK_LOG()->getTypeId()) {
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::AIR());
-            $cobblestone = VanillaBlocks::COBBLESTONE()->asItem();
-            $added = $this->addItemToInventory($cobblestone);
+            $oakLog = VanillaBlocks::OAK_LOG()->asItem();
+            $added = $this->addItemToInventory($oakLog);
             if (!$added) {
-                $world->dropItem($blockPos, $cobblestone);
+                $world->dropItem($blockPos, $oakLog);
             }
             
             $this->scheduleBlockRegeneration($blockPos);
@@ -73,7 +73,7 @@ class CobblestoneMinion extends BaseMinion {
                                 (int)$this->blockPos->x, 
                                 (int)$this->blockPos->y, 
                                 (int)$this->blockPos->z, 
-                                VanillaBlocks::COBBLESTONE()
+                                VanillaBlocks::OAK_LOG()
                             );
                         }
                     }
@@ -83,7 +83,28 @@ class CobblestoneMinion extends BaseMinion {
         );
     }
 
+    protected function generatePlatform(): void {
+        $world = $this->getWorld();
+        $pos = $this->getPosition();
+        $platformY = floor($pos->y - 1);
+        
+        for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
+            for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
+                $blockPos = new Vector3(
+                    floor($pos->x) + $x, 
+                    $platformY, 
+                    floor($pos->z) + $z
+                );
+                
+                $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
+                if ($block->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
+                    $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, VanillaBlocks::OAK_LOG());
+                }
+            }
+        }
+    }
+
     public function getSaveId(): string {
-        return "cobblestone_minion";
+        return "oak_minion";
     }
 }
