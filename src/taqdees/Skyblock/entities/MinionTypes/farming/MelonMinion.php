@@ -104,7 +104,13 @@ class MelonMinion extends BaseMinion {
             }
         }
     }
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        return VanillaBlocks::DIRT();
+    }
 
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::MELON();
+    }
     public function getSaveId(): string {
         return "melon_minion";
     }

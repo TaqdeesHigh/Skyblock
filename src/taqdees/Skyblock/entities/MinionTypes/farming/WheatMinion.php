@@ -86,7 +86,6 @@ class WheatMinion extends BaseMinion {
         $block = $world->getBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z);
         
         if ($block instanceof Wheat && $block->getAge() >= 7) {
-            // Unregister the crop before breaking
             $this->plugin->getMinionCropHandler()->unregisterMinionCrop(
                 $blockPos, 
                 $world->getFolderName()
@@ -107,12 +106,9 @@ class WheatMinion extends BaseMinion {
                 $world->dropItem($blockPos, $seeds);
             }
             
-            // Replant and register as minion crop
             $newWheat = VanillaBlocks::WHEAT();
             $newWheat->setAge(0);
             $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, $newWheat);
-            
-            // Register the new crop
             $this->plugin->getMinionCropHandler()->registerMinionCrop(
                 $blockPos, 
                 $world->getFolderName()
@@ -124,8 +120,6 @@ class WheatMinion extends BaseMinion {
                 $newWheat = VanillaBlocks::WHEAT();
                 $newWheat->setAge(0);
                 $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y, (int)$blockPos->z, $newWheat);
-                
-                // Register as minion crop
                 $this->plugin->getMinionCropHandler()->registerMinionCrop(
                     $blockPos, 
                     $world->getFolderName()
@@ -154,8 +148,6 @@ class WheatMinion extends BaseMinion {
                     $wheatBlock = VanillaBlocks::WHEAT();
                     $wheatBlock->setAge(0);
                     $world->setBlockAt((int)$blockPos->x, (int)$blockPos->y + 1, (int)$blockPos->z, $wheatBlock);
-                    
-                    // Register as minion crop
                     $cropPos = new Vector3(
                         floor($pos->x) + $x,
                         $platformY + 1,
@@ -168,6 +160,16 @@ class WheatMinion extends BaseMinion {
                 }
             }
         }
+    }
+
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        $farmland = VanillaBlocks::FARMLAND();
+        $farmland->setWetness(7);
+        return $farmland;
+    }
+
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::WHEAT();
     }
 
     public function onDispose(): void {

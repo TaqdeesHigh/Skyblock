@@ -104,7 +104,13 @@ class BirchMinion extends BaseMinion {
             }
         }
     }
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        return VanillaBlocks::DIRT();
+    }
 
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::BIRCH_LOG();
+    }
     public function getSaveId(): string {
         return "birch_minion";
     }

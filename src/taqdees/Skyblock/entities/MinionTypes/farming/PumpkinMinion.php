@@ -104,7 +104,13 @@ class PumpkinMinion extends BaseMinion {
             }
         }
     }
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        return VanillaBlocks::DIRT();
+    }
 
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::PUMPKIN();
+    }
     public function getSaveId(): string {
         return "pumpkin_minion";
     }

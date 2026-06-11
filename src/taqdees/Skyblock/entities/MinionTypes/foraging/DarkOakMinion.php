@@ -104,7 +104,13 @@ class DarkOakMinion extends BaseMinion {
             }
         }
     }
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        return VanillaBlocks::DIRT();
+    }
 
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::DARK_OAK_LOG();
+    }
     public function getSaveId(): string {
         return "dark_oak_minion";
     }

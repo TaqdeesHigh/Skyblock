@@ -159,6 +159,16 @@ class CarrotMinion extends BaseMinion {
         }
     }
 
+    protected function getPlatformBlock(): \pocketmine\block\Block {
+        $farmland = VanillaBlocks::FARMLAND();
+        $farmland->setWetness(7);
+        return $farmland;
+    }
+
+    protected function getSurfaceBlock(): ?\pocketmine\block\Block {
+        return VanillaBlocks::CARROTS();
+    }
+
     public function onDispose(): void {
         $world = $this->getWorld();
         $pos = $this->getPosition();
