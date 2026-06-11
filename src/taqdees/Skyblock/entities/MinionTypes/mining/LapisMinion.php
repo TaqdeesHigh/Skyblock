@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class LapisMinion extends BaseMinion {
 
@@ -108,3 +109,8 @@ class LapisMinion extends BaseMinion {
         return "lapis_minion";
     }
 }
+MinionRegistry::register(
+    LapisMinion::class,
+    "lapis",
+    ['LapisMinion', 'taqdees:lapis_minion']
+);

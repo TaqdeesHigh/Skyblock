@@ -45,48 +45,13 @@ class MinionDataManager {
     }
 
     public function createMinionByType(string $type, \pocketmine\entity\Location $location): ?BaseMinion {
-        switch (strtolower($type)) {
-            case "cobblestone":
-                return new CobblestoneMinion($this->plugin, $location, "cobblestone");
-            case "coal":
-                return new CoalMinion($this->plugin, $location, "coal");
-            case "iron":
-                return new IronMinion($this->plugin, $location, "iron");
-            case "gold":
-                return new GoldMinion($this->plugin, $location, "gold");
-            case "diamond":
-                return new DiamondMinion($this->plugin, $location, "diamond");
-            case "lapis":
-                return new LapisMinion($this->plugin, $location, "lapis");
-            case "emerald":
-                return new EmeraldMinion($this->plugin, $location, "emerald");
-            case "redstone":
-                return new RedstoneMinion($this->plugin, $location, "redstone");
-            case "wheat":
-                return new WheatMinion($this->plugin, $location, "wheat");
-            case "carrot":
-                return new CarrotMinion($this->plugin, $location, "carrot");
-            case "potato":
-                return new PotatoMinion($this->plugin, $location, "potato");
-            case "pumpkin":
-                return new PumpkinMinion($this->plugin, $location, "pumpkin");
-            case "melon":
-                return new MelonMinion($this->plugin, $location, "melon");
-            case "oak":
-                return new OakMinion($this->plugin, $location, "oak");
-            case "spruce":
-                return new SpruceMinion($this->plugin, $location, "spruce");
-            case "birch":
-                return new BirchMinion($this->plugin, $location, "birch");
-            case "dark_oak":
-                return new DarkOakMinion($this->plugin, $location, "dark_oak");
-            case "acacia":
-                return new AcaciaMinion($this->plugin, $location, "acacia");
-            default:
-                return null;
+        $class = \taqdees\Skyblock\minions\MinionRegistry::getClass(strtolower($type));
+        if ($class === null) {
+            return null;
         }
+        return new $class($this->plugin, $location, strtolower($type));
     }
-
+    
     public function saveMinionData(string $playerName, Position $position, string $type, int $level): void {
         $minions = $this->minionConfig->get("minions", []);
         if (!isset($minions[$playerName])) {

@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class AcaciaMinion extends BaseMinion {
 
@@ -108,3 +109,8 @@ class AcaciaMinion extends BaseMinion {
         return "acacia_minion";
     }
 }
+MinionRegistry::register(
+    AcaciaMinion::class,
+    "acacia",
+    ['AcaciaMinion', 'taqdees:acacia_minion']
+);

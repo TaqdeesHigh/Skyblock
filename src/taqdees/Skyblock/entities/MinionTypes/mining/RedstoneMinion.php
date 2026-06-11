@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class RedstoneMinion extends BaseMinion {
 
@@ -108,3 +109,8 @@ class RedstoneMinion extends BaseMinion {
         return "redstone_minion";
     }
 }
+MinionRegistry::register(
+    RedstoneMinion::class,
+    "redstone",
+    ['RedstoneMinion', 'taqdees:redstone_minion']
+);

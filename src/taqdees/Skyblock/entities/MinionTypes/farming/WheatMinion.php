@@ -11,6 +11,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class WheatMinion extends BaseMinion {
 
@@ -187,3 +188,8 @@ class WheatMinion extends BaseMinion {
         return "wheat_minion";
     }
 }
+MinionRegistry::register(
+    WheatMinion::class,
+    "wheat",
+    ['WheatMinion', 'taqdees:wheat_minion']
+);

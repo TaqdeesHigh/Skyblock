@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class PumpkinMinion extends BaseMinion {
 
@@ -108,3 +109,9 @@ class PumpkinMinion extends BaseMinion {
         return "pumpkin_minion";
     }
 }
+
+MinionRegistry::register(
+    PumpkinMinion::class,
+    "pumpkin",
+    ['PumpkinMinion', 'taqdees:pumpkin_minion']
+);

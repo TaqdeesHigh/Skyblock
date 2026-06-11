@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class CobblestoneMinion extends BaseMinion {
 
@@ -87,3 +88,8 @@ class CobblestoneMinion extends BaseMinion {
         return "cobblestone_minion";
     }
 }
+MinionRegistry::register(
+    CobblestoneMinion::class,
+    "cobblestone",
+    ['CobblestoneMinion', 'taqdees:cobblestone_minion']
+);

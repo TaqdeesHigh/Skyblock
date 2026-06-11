@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class BirchMinion extends BaseMinion {
 
@@ -108,3 +109,8 @@ class BirchMinion extends BaseMinion {
         return "birch_minion";
     }
 }
+MinionRegistry::register(
+    BirchMinion::class,
+    "birch",
+    ['BirchMinion', 'taqdees:birch_minion']
+);

@@ -71,90 +71,14 @@ class Main extends PluginBase {
         $this->registerGenerators();
         $this->initializeManagers();
         $this->registerListeners();
-        
-        $this->getLogger()->info("§aSkyblock plugin enabled successfully!");
         $this->getLogger()->info("§eRegistered " . $this->getRegisteredMinionCount() . " minion types");
     }
 
     private function registerEntities(): void {
-        $entityFactory = EntityFactory::getInstance();
-        
-        $entityFactory->register(OzzyNPC::class, function(World $world, CompoundTag $nbt): OzzyNPC {
-            return new OzzyNPC($this, EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
-        }, ['OzzyNPC', 'taqdees:ozzynpc']);
-        
-        $entityFactory->register(CobblestoneMinion::class, function(World $world, CompoundTag $nbt): CobblestoneMinion {
-            return new CobblestoneMinion($this, EntityDataHelper::parseLocation($nbt, $world), "cobblestone", null, $nbt);
-        }, ['CobblestoneMinion', 'taqdees:cobblestone_minion']);
-        
-        $entityFactory->register(CoalMinion::class, function(World $world, CompoundTag $nbt): CoalMinion {
-            return new CoalMinion($this, EntityDataHelper::parseLocation($nbt, $world), "coal", null, $nbt);
-        }, ['CoalMinion', 'taqdees:coal_minion']);
-        
-        $entityFactory->register(IronMinion::class, function(World $world, CompoundTag $nbt): IronMinion {
-            return new IronMinion($this, EntityDataHelper::parseLocation($nbt, $world), "iron", null, $nbt);
-        }, ['IronMinion', 'taqdees:iron_minion']);
-        
-        $entityFactory->register(GoldMinion::class, function(World $world, CompoundTag $nbt): GoldMinion {
-            return new GoldMinion($this, EntityDataHelper::parseLocation($nbt, $world), "gold", null, $nbt);
-        }, ['GoldMinion', 'taqdees:gold_minion']);
-        
-        $entityFactory->register(DiamondMinion::class, function(World $world, CompoundTag $nbt): DiamondMinion {
-            return new DiamondMinion($this, EntityDataHelper::parseLocation($nbt, $world), "diamond", null, $nbt);
-        }, ['DiamondMinion', 'taqdees:diamond_minion']);
-        
-        $entityFactory->register(EmeraldMinion::class, function(World $world, CompoundTag $nbt): EmeraldMinion {
-            return new EmeraldMinion($this, EntityDataHelper::parseLocation($nbt, $world), "emerald", null, $nbt);
-        }, ['EmeraldMinion', 'taqdees:emerald_minion']);
-        
-        $entityFactory->register(LapisMinion::class, function(World $world, CompoundTag $nbt): LapisMinion {
-            return new LapisMinion($this, EntityDataHelper::parseLocation($nbt, $world), "lapis", null, $nbt);
-        }, ['LapisMinion', 'taqdees:lapis_minion']);
-        
-        $entityFactory->register(RedstoneMinion::class, function(World $world, CompoundTag $nbt): RedstoneMinion {
-            return new RedstoneMinion($this, EntityDataHelper::parseLocation($nbt, $world), "redstone", null, $nbt);
-        }, ['RedstoneMinion', 'taqdees:redstone_minion']);
-        
-        $entityFactory->register(WheatMinion::class, function(World $world, CompoundTag $nbt): WheatMinion {
-            return new WheatMinion($this, EntityDataHelper::parseLocation($nbt, $world), "wheat", null, $nbt);
-        }, ['WheatMinion', 'taqdees:wheat_minion']);
-        
-        $entityFactory->register(CarrotMinion::class, function(World $world, CompoundTag $nbt): CarrotMinion {
-            return new CarrotMinion($this, EntityDataHelper::parseLocation($nbt, $world), "carrot", null, $nbt);
-        }, ['CarrotMinion', 'taqdees:carrot_minion']);
-        
-        $entityFactory->register(PotatoMinion::class, function(World $world, CompoundTag $nbt): PotatoMinion {
-            return new PotatoMinion($this, EntityDataHelper::parseLocation($nbt, $world), "potato", null, $nbt);
-        }, ['PotatoMinion', 'taqdees:potato_minion']);
-        
-        $entityFactory->register(MelonMinion::class, function(World $world, CompoundTag $nbt): MelonMinion {
-            return new MelonMinion($this, EntityDataHelper::parseLocation($nbt, $world), "melon", null, $nbt);
-        }, ['MelonMinion', 'taqdees:melon_minion']);
-        
-        $entityFactory->register(PumpkinMinion::class, function(World $world, CompoundTag $nbt): PumpkinMinion {
-            return new PumpkinMinion($this, EntityDataHelper::parseLocation($nbt, $world), "pumpkin", null, $nbt);
-        }, ['PumpkinMinion', 'taqdees:pumpkin_minion']);
-        
-        $entityFactory->register(OakMinion::class, function(World $world, CompoundTag $nbt): OakMinion {
-            return new OakMinion($this, EntityDataHelper::parseLocation($nbt, $world), "oak", null, $nbt);
-        }, ['OakMinion', 'taqdees:oak_minion']);
-        
-        $entityFactory->register(SpruceMinion::class, function(World $world, CompoundTag $nbt): SpruceMinion {
-            return new SpruceMinion($this, EntityDataHelper::parseLocation($nbt, $world), "spruce", null, $nbt);
-        }, ['SpruceMinion', 'taqdees:spruce_minion']);
-        
-        $entityFactory->register(BirchMinion::class, function(World $world, CompoundTag $nbt): BirchMinion {
-            return new BirchMinion($this, EntityDataHelper::parseLocation($nbt, $world), "birch", null, $nbt);
-        }, ['BirchMinion', 'taqdees:birch_minion']);
-        
-        $entityFactory->register(AcaciaMinion::class, function(World $world, CompoundTag $nbt): AcaciaMinion {
-            return new AcaciaMinion($this, EntityDataHelper::parseLocation($nbt, $world), "acacia", null, $nbt);
-        }, ['AcaciaMinion', 'taqdees:acacia_minion']);
-        
-        $entityFactory->register(DarkOakMinion::class, function(World $world, CompoundTag $nbt): DarkOakMinion {
-            return new DarkOakMinion($this, EntityDataHelper::parseLocation($nbt, $world), "dark_oak", null, $nbt);
-        }, ['DarkOakMinion', 'taqdees:dark_oak_minion']);
+        \taqdees\Skyblock\entities\OzzyNPC::registerEntity($this);
+        \taqdees\Skyblock\minions\MinionRegistry::init($this);
     }
+
 
     private function registerGenerators(): void {
         \taqdees\Skyblock\generators\VoidWorldGenerator::register();

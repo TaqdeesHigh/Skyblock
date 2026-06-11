@@ -11,7 +11,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
-
+use taqdees\Skyblock\minions\MinionRegistry;
 class PotatoMinion extends BaseMinion {
 
     protected function initializeProfession(): ?Profession {
@@ -175,3 +175,9 @@ class PotatoMinion extends BaseMinion {
         return "potato_minion";
     }
 }
+
+MinionRegistry::register(
+    PotatoMinion::class,
+    "potato",
+    ['PotatoMinion', 'taqdees:potato_minion']
+);

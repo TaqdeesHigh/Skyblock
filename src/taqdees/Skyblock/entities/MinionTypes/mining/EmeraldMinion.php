@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class EmeraldMinion extends BaseMinion {
 
@@ -108,3 +109,9 @@ class EmeraldMinion extends BaseMinion {
         return "emerald_minion";
     }
 }
+MinionRegistry::register(
+    EmeraldMinion::class,
+    "emerald",
+    ['EmeraldMinion', 'taqdees:emerald_minion']
+);
+ 

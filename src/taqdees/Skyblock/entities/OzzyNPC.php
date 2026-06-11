@@ -14,6 +14,9 @@ use pocketmine\entity\Skin;
 use pocketmine\math\Vector3;
 use pocketmine\entity\Entity;
 use taqdees\Skyblock\Main;
+use pocketmine\entity\EntityDataHelper;
+use pocketmine\entity\EntityFactory;
+use pocketmine\world\World;
 
 class OzzyNPC extends Human {
 
@@ -223,4 +226,16 @@ class OzzyNPC extends Human {
         
         $this->setNameTag($this->customName);
     }
+
+
+    public static function registerEntity(Main $plugin): void {
+        EntityFactory::getInstance()->register(
+            OzzyNPC::class,
+            function (World $world, CompoundTag $nbt) use ($plugin): OzzyNPC {
+                return new OzzyNPC($plugin, EntityDataHelper::parseLocation($nbt, $world), null, $nbt);
+            },
+            ['OzzyNPC', 'taqdees:ozzynpc']
+        );
+    }
+
 }

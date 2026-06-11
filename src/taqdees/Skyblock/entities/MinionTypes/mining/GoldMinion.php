@@ -10,6 +10,7 @@ use pocketmine\math\Vector3;
 use taqdees\Skyblock\entities\BaseMinion;
 use taqdees\Skyblock\minions\professions\Profession;
 use taqdees\Skyblock\minions\professions\ProfessionRegistry;
+use taqdees\Skyblock\minions\MinionRegistry;
 
 class GoldMinion extends BaseMinion {
 
@@ -108,3 +109,8 @@ class GoldMinion extends BaseMinion {
         return "gold_minion";
     }
 }
+MinionRegistry::register(
+    GoldMinion::class,
+    "gold",
+    ['GoldMinion', 'taqdees:gold_minion']
+);
