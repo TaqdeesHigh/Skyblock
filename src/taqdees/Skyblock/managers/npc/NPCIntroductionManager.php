@@ -21,27 +21,54 @@ class NPCIntroductionManager {
     /** @var array<string, callable> */
     private array $pendingCallbacks = [];
 
+    private string $dataFile;
+
     public function __construct(Main $plugin) {
         $this->plugin = $plugin;
+        $this->dataFile = $plugin->getDataFolder() . "seen_introductions.json";
+        $this->loadFromDisk();
+    }
+
+    private function loadFromDisk(): void {
+        if (!file_exists($this->dataFile)) {
+            return;
+        }
+
+        $json = file_get_contents($this->dataFile);
+        if ($json === false) return;
+
+        $data = json_decode($json, true);
+        if (!is_array($data)) return;
+
+        foreach ($data as $playerName) {
+            $this->hasSeenIntroduction[$playerName] = true;
+        }
+    }
+
+    private function saveToDisk(): void {
+        $data = array_keys($this->hasSeenIntroduction);
+        file_put_contents($this->dataFile, json_encode($data, JSON_PRETTY_PRINT));
     }
 
     public function showIntroduction(Player $player, OzzyNPC $npc, callable $onComplete): void {
         $playerName = $player->getName();
+
         if (isset($this->playingIntroduction[$playerName])) {
             $this->pendingCallbacks[$playerName] = $onComplete;
             return;
         }
-        
+
         if ($this->hasSeenIntroduction($playerName)) {
             call_user_func($onComplete);
             return;
         }
-        
+
         $this->playingIntroduction[$playerName] = true;
         $this->introductionStartTime[$playerName] = time();
         $this->pendingCallbacks[$playerName] = $onComplete;
         $this->hasSeenIntroduction[$playerName] = true;
-        
+        $this->saveToDisk();
+
         $introMessages = [
             "§6Hello there, " . $player->getName() . "!",
             "§eI'm " . $npc->getDisplayName() . ", your island assistant!",
@@ -53,25 +80,46 @@ class NPCIntroductionManager {
         $this->sendMessageSequence($player, $introMessages, 0);
     }
 
+    public function resetIntroduction(string $playerName): void {
+        $this->cleanupIntroduction($playerName);
+        unset($this->hasSeenIntroduction[$playerName]);
+        $this->saveToDisk();
+    }
+
+    public function hasSeenIntroduction(string $playerName): bool {
+        return isset($this->hasSeenIntroduction[$playerName]);
+    }
+
+    public function isPlayingIntroduction(string $playerName): bool {
+        return isset($this->playingIntroduction[$playerName]);
+    }
+
+    public function stopIntroduction(string $playerName): void {
+        if (!$this->isPlayingIntroduction($playerName)) {
+            $this->cleanupIntroduction($playerName);
+        }
+    }
+
     private function sendMessageSequence(Player $player, array $messages, int $index): void {
         $playerName = $player->getName();
-        
+
         if (!$player->isOnline() || !isset($this->playingIntroduction[$playerName])) {
             $this->completeIntroduction($playerName);
             return;
         }
-        if (isset($this->introductionStartTime[$playerName]) && 
+        if (isset($this->introductionStartTime[$playerName]) &&
             (time() - $this->introductionStartTime[$playerName]) > 30) {
             $this->completeIntroduction($playerName);
             return;
         }
-        
+
         if ($index >= count($messages)) {
             $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($playerName): void {
                 $this->completeIntroduction($playerName);
             }), 20);
             return;
         }
+
         $player->sendMessage($messages[$index]);
         $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function() use ($player, $messages, $index): void {
             $this->sendMessageSequence($player, $messages, $index + 1);
@@ -84,25 +132,6 @@ class NPCIntroductionManager {
             $this->cleanupIntroduction($playerName);
             call_user_func($callback);
         } else {
-            $this->cleanupIntroduction($playerName);
-        }
-    }
-
-    public function hasSeenIntroduction(string $playerName): bool {
-        return isset($this->hasSeenIntroduction[$playerName]);
-    }
-
-    public function isPlayingIntroduction(string $playerName): bool {
-        return isset($this->playingIntroduction[$playerName]);
-    }
-
-    public function resetIntroduction(string $playerName): void {
-        $this->cleanupIntroduction($playerName);
-        unset($this->hasSeenIntroduction[$playerName]);
-    }
-
-    public function stopIntroduction(string $playerName): void {
-        if (!$this->isPlayingIntroduction($playerName)) {
             $this->cleanupIntroduction($playerName);
         }
     }
