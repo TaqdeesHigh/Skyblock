@@ -151,6 +151,8 @@ trait MinionWorkTrait {
         }
 
         if (!empty($workPositions)) {
+            $this->fillMissingPlatformBlocks();
+
             $randomIndex = array_rand($workPositions);
             $this->targetBlock = $workPositions[$randomIndex];
             $this->breakingTick = 0;
@@ -162,21 +164,26 @@ trait MinionWorkTrait {
 
         $this->generatePlatform();
     }
+    protected function fillMissingPlatformBlocks(): void {
+        $world  = $this->getWorld();
+        $pos    = $this->getPosition();
 
-    protected function generatePlatform(): void {
-        $world = $this->getWorld();
-        $pos = $this->getPosition();
-        $platformY = floor($pos->y - 1);
+        $isForaging = $this->profession !== null && $this->profession->getName() === "Woodcutting";
 
         $baseBlock    = $this->getBaseBlock();
         $harvestBlock = $this->getHarvestBlock();
-        $isForaging = $this->profession !== null && $this->profession->getName() === "Woodcutting";
+
+        $platformY = (int)floor($pos->y - 1);
 
         for ($x = -$this->workRadius; $x <= $this->workRadius; $x++) {
             for ($z = -$this->workRadius; $z <= $this->workRadius; $z++) {
                 $isCenter = ($x === 0 && $z === 0);
 
-                $basePos = new Vector3(floor($pos->x) + $x, $platformY, floor($pos->z) + $z);
+                $basePos = new Vector3(
+                    floor($pos->x) + $x,
+                    $platformY,
+                    floor($pos->z) + $z
+                );
                 $existing = $world->getBlockAt((int)$basePos->x, (int)$basePos->y, (int)$basePos->z);
                 if ($existing->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
                     $world->setBlockAt((int)$basePos->x, (int)$basePos->y, (int)$basePos->z, $baseBlock);
@@ -184,10 +191,10 @@ trait MinionWorkTrait {
 
                 if ($harvestBlock !== null && !$isCenter) {
                     $harvestY = $isForaging
-                        ? (int)floor($pos->y)
-                        : (int)$basePos->y + 1;
+                        ? (int)floor($pos->y)  
+                        : (int)$basePos->y + 1;  
 
-                    $harvestPos = new Vector3((int)$basePos->x, $harvestY, (int)$basePos->z);
+                    $harvestPos    = new Vector3((int)$basePos->x, $harvestY, (int)$basePos->z);
                     $harvestExisting = $world->getBlockAt((int)$harvestPos->x, (int)$harvestPos->y, (int)$harvestPos->z);
                     if ($harvestExisting->getTypeId() === VanillaBlocks::AIR()->getTypeId()) {
                         $world->setBlockAt((int)$harvestPos->x, (int)$harvestPos->y, (int)$harvestPos->z, $harvestBlock);
@@ -195,6 +202,10 @@ trait MinionWorkTrait {
                 }
             }
         }
+    }
+
+    protected function generatePlatform(): void {
+        $this->fillMissingPlatformBlocks();
     }
 
     protected function getBaseBlock(): Block {
