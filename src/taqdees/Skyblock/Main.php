@@ -60,7 +60,7 @@ class Main extends PluginBase {
 
     public function onEnable(): void {
         $this->saveDefaultConfig();
-        
+        $this->saveResource("skins/ozzy.png");
         if (!InvMenuHandler::isRegistered()) {
             InvMenuHandler::register($this);
         }

@@ -21,3 +21,5 @@ commands:
     description: Skyblock admin commands
     permission: skyblock.admin
     usage: "/skyblock admin"
+resources:
+  - skins/ozzy.png

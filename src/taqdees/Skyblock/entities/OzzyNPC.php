@@ -113,22 +113,60 @@ class OzzyNPC extends Human {
     private function loadCustomSkin(): void {
         $plugin = $this->plugin;
         $skinPath = $plugin->getDataFolder() . "skins/ozzy.png";
-        
-        if (file_exists($skinPath)) {
-            try {
-                $skinData = file_get_contents($skinPath);
-                if ($skinData !== false) {
-                    $skin = new Skin("ozzy_npc", $skinData);
-                    $this->setSkin($skin);
-                    return;
-                }
-            } catch (\Exception $e) {
-                $plugin->getLogger()->warning("Failed to load custom skin: " . $e->getMessage());
-            }
-        }
-        $this->setDefaultSkin();
-    }
 
+        if (!file_exists($skinPath)) {
+            $plugin->getLogger()->warning("Skin file not found: " . $skinPath);
+            $this->setDefaultSkin();
+            return;
+        }
+
+        try {
+            $image = imagecreatefrompng($skinPath);
+            if ($image === false) {
+                throw new \RuntimeException("Failed to load PNG image");
+            }
+            if (!imageistruecolor($image)) {
+                $trueColor = imagecreatetruecolor(imagesx($image), imagesy($image));
+                imagealphablending($trueColor, false);
+                imagesavealpha($trueColor, true);
+                $transparent = imagecolorallocatealpha($trueColor, 0, 0, 0, 127);
+                imagefill($trueColor, 0, 0, $transparent);
+                imagecopy($trueColor, $image, 0, 0, 0, 0, imagesx($image), imagesy($image));
+                imagedestroy($image);
+                $image = $trueColor;
+            }
+
+            imagesavealpha($image, true);
+            imagealphablending($image, false);
+
+            $width  = imagesx($image);
+            $height = imagesy($image);
+
+            $skinData = "";
+            for ($y = 0; $y < $height; $y++) {
+                for ($x = 0; $x < $width; $x++) {
+                    $rgba = imagecolorat($image, $x, $y);
+                    $r = ($rgba >> 16) & 0xFF;
+                    $g = ($rgba >> 8)  & 0xFF;
+                    $b = $rgba         & 0xFF;
+                    $a = (int) round((127 - (($rgba >> 24) & 0x7F)) / 127 * 255);
+                    $skinData .= chr($r) . chr($g) . chr($b) . chr($a);
+                }
+            }
+
+            imagedestroy($image);
+
+            $plugin->getLogger()->info("Loaded skin: {$width}x{$height}, data length: " . strlen($skinData));
+
+            $skin = new Skin("ozzy_npc", $skinData);
+            $this->setSkin($skin);
+
+        } catch (\Exception $e) {
+            $plugin->getLogger()->warning("Failed to load custom skin: " . $e->getMessage());
+            $this->setDefaultSkin();
+        }
+    }
+    
     private function setDefaultSkin(): void {
         $skinData = str_repeat("\x8B\x69\x3D\xFF", 64 * 64);
         $skin = new Skin("default_ozzy", $skinData);
