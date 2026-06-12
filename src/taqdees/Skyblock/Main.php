@@ -61,6 +61,8 @@ class Main extends PluginBase {
     public function onEnable(): void {
         $this->saveDefaultConfig();
         $this->saveResource("skins/ozzy.png");
+        $this->saveAllSkinResources();
+
         if (!InvMenuHandler::isRegistered()) {
             InvMenuHandler::register($this);
         }
@@ -72,6 +74,26 @@ class Main extends PluginBase {
         $this->initializeManagers();
         $this->registerListeners();
         $this->getLogger()->info("§eRegistered " . $this->getRegisteredMinionCount() . " minion types");
+    }
+
+    private function saveAllSkinResources(): void {
+        $resourceSkins = $this->getFile() . "resources/skins/";
+        if (!is_dir($resourceSkins)) return;
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($resourceSkins, \FilesystemIterator::SKIP_DOTS)
+        );
+
+        foreach ($iterator as $file) {
+            if (strtolower($file->getExtension()) !== 'png') continue;
+            $relativePath = str_replace($this->getFile() . "resources/", "", $file->getPathname());
+            $relativePath = str_replace("\\", "/", $relativePath);
+            $outputDir = dirname($this->getDataFolder() . $relativePath);
+            if (!is_dir($outputDir)) {
+                mkdir($outputDir, 0755, true);
+            }
+            $this->saveResource($relativePath, false);
+        }
     }
 
     private function registerEntities(): void {
