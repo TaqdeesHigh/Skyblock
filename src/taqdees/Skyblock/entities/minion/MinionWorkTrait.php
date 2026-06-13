@@ -40,12 +40,12 @@ trait MinionWorkTrait {
         $this->enforcePosition();
         return $result;
     }
-
     protected function updateWorkStats(): void {
-        $this->workCooldown = max(5, 20 - ($this->level - 1) * 2);
-        $this->breakTime = max(10, 30 - ($this->level - 1) * 2);
-        $this->breakCooldown = max(20, 100 - ($this->level - 1) * 8);
-        $this->animationInterval = max(3, 8 - ($this->level - 1));
+        $level = $this->level;
+        $this->breakTime = max(6, 30 - ($level - 1) * 6);
+        $this->breakCooldown = max(20, 100 - ($level - 1) * 20);
+        $this->workCooldown = max(5, 20 - ($level - 1) * 3);
+        $this->animationInterval = max(2, 8 - ($level - 1) * 2);
     }
 
     protected function updateEquipment(): void {

@@ -18,36 +18,40 @@ class MinionInventoryManager {
 
     private Main $plugin;
     private MinionUpgradeManager $upgradeManager;
+    private MinionUpgradeMenuManager $upgradeMenuManager;
     /** @var array<string, InvMenu> */
     private array $openMenus = [];
 
     public function __construct(Main $plugin, MinionUpgradeManager $upgradeManager) {
-        $this->plugin = $plugin;
-        $this->upgradeManager = $upgradeManager;
+        $this->plugin             = $plugin;
+        $this->upgradeManager     = $upgradeManager;
+        $this->upgradeMenuManager = new MinionUpgradeMenuManager($plugin, $upgradeManager, $this);
     }
 
     public function openMinionInventoryMenu(Player $player, BaseMinion $minion): void {
         $menu = InvMenu::create(InvMenuTypeIds::TYPE_DOUBLE_CHEST);
         $menu->setName($minion->getDisplayName());
         $this->openMenus[$player->getName()] = $menu;
-        
+
         $inventory = $menu->getInventory();
-        
         $this->setupMenuLayout($inventory, $minion);
         $this->setupMenuListener($menu, $minion);
-        $menu->setInventoryCloseListener(function(Player $player, \pocketmine\inventory\Inventory $inventory): void {
+
+        $menu->setInventoryCloseListener(function (Player $player, \pocketmine\inventory\Inventory $inventory): void {
             unset($this->openMenus[$player->getName()]);
         });
-        
+
         $menu->send($player);
     }
 
     private function setupMenuLayout($inventory, BaseMinion $minion): void {
-        $grayGlassPane = $this->createGlassPane("§7", 8);
+        $grayGlassPane  = $this->createGlassPane("§7", 8);
         $whiteGlassPane = $this->createGlassPane("§f§lLOCKED", 0, ["§7Upgrade minion to unlock!"]);
+
         for ($i = 0; $i < 54; $i++) {
             $inventory->setItem($i, $grayGlassPane);
         }
+
         $this->setupTopRowItems($inventory, $minion);
         $this->setupStorageSlots($inventory, $minion, $whiteGlassPane);
         $this->setupSideUtilities($inventory);
@@ -76,54 +80,65 @@ class MinionInventoryManager {
             $maxLevelItem = $this->createMaxLevelItem();
             $inventory->setItem(3, $maxLevelItem);
         }
+
         $minionInfo = $this->createMinionInfoItem($minion);
         $inventory->setItem(4, $minionInfo);
+
         $skinButton = $this->createSkinButton();
         $inventory->setItem(5, $skinButton);
     }
 
     private function createUpgradeButton(BaseMinion $minion): \pocketmine\item\Item {
-        $upgradeCost = $this->upgradeManager->getUpgradeCost($minion);
-        $benefits = $this->upgradeManager->getUpgradeBenefits($minion);
-        
+        $targetLevel = $minion->getLevel() + 1;
+        $costData    = $this->upgradeManager->getUpgradeCost($minion);
+        $benefits    = $this->upgradeManager->getUpgradeBenefits($minion);
+        $targetName  = $this->upgradeManager->getLevelName($targetLevel);
+        $currentName = $this->upgradeManager->getLevelName($minion->getLevel());
+
         $upgradeButton = VanillaItems::EXPERIENCE_BOTTLE();
         $upgradeButton->setCustomName("§bUpgrade Minion");
         $upgradeButton->setLore([
-            "§7Current Level: §a" . $minion->getLevel(),
-            "§7Next Level: §a" . ($minion->getLevel() + 1),
+            "§7Current: §e" . $currentName . " §7(Lv. " . $minion->getLevel() . ")",
+            "§7Next:    §a" . $targetName  . " §7(Lv. " . $targetLevel . ")",
             "",
             "§7Upgrade Cost:",
-            "§8• §7" . $upgradeCost["description"],
+            "§8• §7" . $costData["description"],
             "",
             "§7Benefits:",
             "§8• §7" . $benefits["description"][0],
             "§8• §7" . $benefits["description"][1],
+            "§8• §7" . $benefits["description"][2],
             "",
-            "§eClick to upgrade!"
+            "§eClick to open upgrade menu!",
         ]);
         return $upgradeButton;
     }
 
     private function createMaxLevelItem(): \pocketmine\item\Item {
         $maxLevelItem = VanillaBlocks::BEACON()->asItem();
-        $maxLevelItem->setCustomName("§6§lMAX LEVEL");
+        $maxLevelItem->setCustomName("§6§lMASTER LEVEL");
         $maxLevelItem->setLore([
-            "§7This minion is at maximum level!",
-            "§7All upgrades have been unlocked."
+            "§7This minion has reached §6Master§7 level!",
+            "§7All upgrades have been unlocked.",
         ]);
         return $maxLevelItem;
     }
 
     private function createMinionInfoItem(BaseMinion $minion): \pocketmine\item\Item {
+        $levelName  = $this->upgradeManager->getLevelName($minion->getLevel());
+        $tool       = $minion->getCurrentTool();
+        $toolName   = $tool?->getName() ?? "None";
+
         $minionInfo = VanillaBlocks::MOB_HEAD()->asItem();
-        $minionInfo->setCustomName("§6" . $minion->getDisplayName());
+        $minionInfo->setCustomName("§6" . ucfirst($minion->getMinionType()) . " Minion");
         $minionInfo->setLore([
-            "§7Type: §e" . ucfirst($minion->getMinionType()),
+            "§7Rank:  §e" . $levelName,
             "§7Level: §a" . $minion->getLevel() . "§7/§a" . $minion->getMaxLevel(),
+            "§7Tool:  §b" . $toolName,
             "§7Status: §2Active",
             "",
             "§7This minion automatically",
-            "§7works for you while you're away!"
+            "§7works for you while you're away!",
         ]);
         return $minionInfo;
     }
@@ -135,7 +150,7 @@ class MinionInventoryManager {
             "§7Change your minion's appearance!",
             "",
             "§7Current skin: §eDefault",
-            "§8(Click to browse skins)"
+            "§8(Click to browse skins)",
         ]);
         return $skinButton;
     }
@@ -144,12 +159,12 @@ class MinionInventoryManager {
         $storageSlots = [
             21, 22, 23, 24, 25,
             30, 31, 32, 33, 34,
-            39, 40, 41, 42, 43
+            39, 40, 41, 42, 43,
         ];
-        
-        $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
+
+        $unlockedSlots  = min($minion->getMaxInventorySlots(), count($storageSlots));
         $minionInventory = $minion->getMinionInventory();
-        
+
         for ($i = 0; $i < count($storageSlots); $i++) {
             $slot = $storageSlots[$i];
             if ($i < $unlockedSlots) {
@@ -174,9 +189,10 @@ class MinionInventoryManager {
             "§7Accepted fuels:",
             "§8• §7Coal (+10% speed)",
             "§8• §7Enchanted Coal (+25% speed)",
-            "§8• §7Block of Coal (+50% speed)"
+            "§8• §7Block of Coal (+50% speed)",
         ]);
         $inventory->setItem(19, $fuelSlot);
+
         $autoCollectSlot = VanillaBlocks::HOPPER()->asItem();
         $autoCollectSlot->setCustomName("§9Auto Collect");
         $autoCollectSlot->setLore([
@@ -186,7 +202,7 @@ class MinionInventoryManager {
             "§7Available items:",
             "§8• §7Budget Hopper (slow collection)",
             "§8• §7Enchanted Hopper (fast collection)",
-            "§8• §7Super Compactor (compacts items)"
+            "§8• §7Super Compactor (compacts items)",
         ]);
         $inventory->setItem(37, $autoCollectSlot);
     }
@@ -198,9 +214,10 @@ class MinionInventoryManager {
             "§7Click to collect all items",
             "§7from this minion's storage!",
             "",
-            "§7Items in storage: §e" . $this->countStorageItems($minion)
+            "§7Items in storage: §e" . $this->countStorageItems($minion),
         ]);
         $inventory->setItem(48, $collectButton);
+
         $pickupButton = VanillaBlocks::BEDROCK()->asItem();
         $pickupButton->setCustomName("§cPickup Minion");
         $pickupButton->setLore([
@@ -209,47 +226,46 @@ class MinionInventoryManager {
             "",
             "§c§lWARNING:",
             "§7This will remove the minion",
-            "§7from this location permanently!"
+            "§7from this location permanently!",
         ]);
         $inventory->setItem(50, $pickupButton);
     }
 
     private function setupMenuListener(InvMenu $menu, BaseMinion $minion): void {
-        $storageSlots = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
-        $unlockedSlots = min($minion->getLevel() * 2, count($storageSlots));
-        
-        $menu->setListener(function(InvMenuTransaction $transaction) use ($minion, $storageSlots, $unlockedSlots, $menu): InvMenuTransactionResult {
-            $player = $transaction->getPlayer();
-            $slot = $transaction->getAction()->getSlot();
+        $storageSlots  = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
+        $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
+
+        $menu->setListener(function (InvMenuTransaction $transaction) use ($minion, $storageSlots, $unlockedSlots, $menu): InvMenuTransactionResult {
+            $player      = $transaction->getPlayer();
+            $slot        = $transaction->getAction()->getSlot();
             $clickedItem = $transaction->getItemClicked();
             $storageSlotIndex = array_search($slot, $storageSlots);
-            
             if ($storageSlotIndex !== false && $storageSlotIndex < $unlockedSlots) {
                 $this->plugin->getScheduler()->scheduleDelayedTask(
-                    new \pocketmine\scheduler\ClosureTask(function() use ($menu, $minion, $storageSlots, $unlockedSlots): void {
+                    new \pocketmine\scheduler\ClosureTask(function () use ($menu, $minion, $storageSlots, $unlockedSlots): void {
                         $this->syncMinionInventoryFromMenu($menu, $minion, $storageSlots, $unlockedSlots);
                     }), 1
                 );
                 return $transaction->continue();
             }
-            
+
             $this->handleButtonClick($player, $minion, $slot, $clickedItem);
-            
             return $transaction->discard();
         });
     }
 
     private function syncMinionInventoryFromMenu(InvMenu $menu, BaseMinion $minion, array $storageSlots, int $unlockedSlots): void {
-        $menuInventory = $menu->getInventory();
+        $menuInventory     = $menu->getInventory();
         $newMinionInventory = [];
+
         for ($i = 0; $i < $unlockedSlots; $i++) {
             $slot = $storageSlots[$i];
             $item = $menuInventory->getItem($slot);
-            
             if (!$item->isNull() && $item->getCount() > 0) {
                 $newMinionInventory[] = clone $item;
             }
         }
+
         $minion->syncInventoryFromArray($newMinionInventory);
     }
 
@@ -257,41 +273,47 @@ class MinionInventoryManager {
         switch ($slot) {
             case 3:
                 if ($clickedItem->getCustomName() === "§bUpgrade Minion") {
-                    $this->upgradeManager->upgradeMinion($player, $minion);
-                    $this->refreshMenu($player, $minion);
+                    $player->removeCurrentWindow();
+                    $this->plugin->getScheduler()->scheduleDelayedTask(
+                        new \pocketmine\scheduler\ClosureTask(function () use ($player, $minion): void {
+                            if ($player->isOnline()) {
+                                $this->upgradeMenuManager->openUpgradeMenu($player, $minion);
+                            }
+                        }), 3
+                    );
                 }
                 break;
-                
-            case 5: 
+
+            case 5:
                 if ($clickedItem->getCustomName() === "§dMinion Skin") {
                     $player->sendMessage("§dMinion skin feature coming soon!");
                 }
                 break;
-                
+
             case 48:
                 if ($clickedItem->getCustomName() === "§aCollect All") {
                     $this->collectMinionItems($player, $minion);
                 }
                 break;
-                
+
             case 50:
                 if ($clickedItem->getCustomName() === "§cPickup Minion") {
                     $this->pickupMinion($player, $minion);
                     $player->removeCurrentWindow();
                 }
                 break;
-                
+
             case 19:
             case 37:
                 $player->sendMessage("§7This feature is coming soon!");
                 break;
         }
     }
-
+    
     private function refreshMenu(Player $player, BaseMinion $minion): void {
         $player->removeCurrentWindow();
         $this->plugin->getScheduler()->scheduleDelayedTask(
-            new \pocketmine\scheduler\ClosureTask(function() use ($player, $minion): void {
+            new \pocketmine\scheduler\ClosureTask(function () use ($player, $minion): void {
                 if ($player->isOnline()) {
                     $this->openMinionInventoryMenu($player, $minion);
                 }
@@ -311,53 +333,47 @@ class MinionInventoryManager {
     }
 
     private function updateStorageDisplay(Player $player, BaseMinion $minion): void {
-        if (!isset($this->openMenus[$player->getName()])) {
-            return;
-        }
+        if (!isset($this->openMenus[$player->getName()])) return;
 
-        $menu = $this->openMenus[$player->getName()];
-        $inventory = $menu->getInventory();
-        
+        $menu        = $this->openMenus[$player->getName()];
+        $inventory   = $menu->getInventory();
         $storageSlots = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
         $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
         $minionInventory = $minion->getMinionInventory();
+
         for ($i = 0; $i < $unlockedSlots; $i++) {
-            $slot = $storageSlots[$i];
-            $inventory->clear($slot);
+            $inventory->clear($storageSlots[$i]);
         }
-        
         for ($i = 0; $i < count($minionInventory) && $i < $unlockedSlots; $i++) {
-            $slot = $storageSlots[$i];
             if (!$minionInventory[$i]->isNull()) {
-                $inventory->setItem($slot, $minionInventory[$i]);
+                $inventory->setItem($storageSlots[$i], $minionInventory[$i]);
             }
         }
     }
-    private function updateCollectButton(Player $player, BaseMinion $minion): void {
-        if (!isset($this->openMenus[$player->getName()])) {
-            return;
-        }
 
-        $menu = $this->openMenus[$player->getName()];
+    private function updateCollectButton(Player $player, BaseMinion $minion): void {
+        if (!isset($this->openMenus[$player->getName()])) return;
+
+        $menu      = $this->openMenus[$player->getName()];
         $inventory = $menu->getInventory();
-        
+
         $collectButton = VanillaBlocks::CHEST()->asItem();
         $collectButton->setCustomName("§aCollect All");
         $collectButton->setLore([
             "§7Click to collect all items",
             "§7from this minion's storage!",
             "",
-            "§7Items in storage: §e" . $this->countStorageItems($minion)
+            "§7Items in storage: §e" . $this->countStorageItems($minion),
         ]);
-        
         $inventory->setItem(48, $collectButton);
     }
 
     private function pickupMinion(Player $player, BaseMinion $minion): void {
         $spawnManager = new MinionSpawnManager($this->plugin, $this->plugin->getMinionManager()->getDataManager());
-        $minionEgg = $spawnManager->createMinionEgg($minion->getMinionType(), $minion->getLevel());
-        
+        $minionEgg    = $spawnManager->createMinionEgg($minion->getMinionType(), $minion->getLevel());
+
         $this->collectMinionItems($player, $minion);
+
         if ($player->getInventory()->canAddItem($minionEgg)) {
             $player->getInventory()->addItem($minionEgg);
             $player->sendMessage("§aMinion picked up successfully!");
@@ -365,10 +381,12 @@ class MinionInventoryManager {
             $player->getWorld()->dropItem($player->getPosition(), $minionEgg);
             $player->sendMessage("§eMinion egg dropped on the ground (inventory full)!");
         }
+
         $dataManager = $this->plugin->getMinionManager()->getDataManager();
         if (method_exists($dataManager, 'removeMinionFromData')) {
             $dataManager->removeMinionFromData($player->getName(), $minion);
         }
+
         $minion->flagForDespawn();
     }
 }

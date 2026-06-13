@@ -22,12 +22,12 @@ class MinionManager {
     private MinionUpgradeManager $upgradeManager;
 
     public function __construct(Main $plugin) {
-        $this->plugin = $plugin;
-        $this->dataManager = new MinionDataManager($plugin);
-        $this->spawnManager = new MinionSpawnManager($plugin, $this->dataManager);
+        $this->plugin        = $plugin;
+        $this->dataManager   = new MinionDataManager($plugin);
+        $this->spawnManager  = new MinionSpawnManager($plugin, $this->dataManager);
         $this->upgradeManager = new MinionUpgradeManager($plugin, $this->dataManager);
         $this->inventoryManager = new MinionInventoryManager($plugin, $this->upgradeManager);
-        
+
         $this->loadMinions();
     }
 
@@ -45,10 +45,6 @@ class MinionManager {
 
     public function getDataManager(): MinionDataManager {
         return $this->dataManager;
-    }
-
-    public function openMinionMenu(Player $player, BaseMinion $minion): void {
-        $this->inventoryManager->openMinionMenu($player, $minion);
     }
 
     public function openMinionInventoryMenu(Player $player, BaseMinion $minion): void {

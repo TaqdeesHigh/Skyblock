@@ -29,7 +29,7 @@ abstract class BaseMinion extends Human {
     protected string $customName;
     protected Main $plugin;
     protected int $level = 1;
-    public int $maxLevel = 11;
+    public int $maxLevel = 5;
     protected ?Profession $profession = null;
 
     public function __construct(Main $plugin, Location $location, string $minionType, Skin $skin = null, CompoundTag $nbt = null) {
@@ -61,9 +61,10 @@ abstract class BaseMinion extends Human {
     }
 
     public function getDisplayName(): string {
-        $professionName = $this->profession ? $this->profession->getDisplayName() : "§7Unknown";
-        $inventoryStatus = $this->getInventoryItemCount() . "/" . $this->getMaxInventorySlots();
-        return $professionName . " " . $this->customName . " §7(Lv. " . $this->level . ") §8[" . $inventoryStatus . "]";
+        $filled = count($this->minionInventory);
+        $max = $this->getMaxInventorySlots();
+        $inventoryStatus = $filled >= $max ? "§cFull" : $filled . "/" . $max;
+        return ucfirst($this->minionType) . " Minion §8[" . $inventoryStatus . "§8]";
     }
     
     public function getProfession(): ?Profession { return $this->profession; }
