@@ -123,16 +123,25 @@ class EventListener implements Listener {
     public function onBlockPlace(BlockPlaceEvent $event): void {
         $player = $event->getPlayer();
         $transaction = $event->getTransaction();
-        $blocks = $transaction->getBlocks();
-        
-        foreach ($blocks as [$x, $y, $z, $block]) {
-            if (!$this->plugin->isInEditMode($player->getName()) && 
+
+        foreach ($transaction->getBlocks() as [$x, $y, $z, $block]) {
+            foreach ($player->getWorld()->getEntities() as $entity) {
+                if ($entity instanceof \taqdees\Skyblock\entities\BaseMinion || $entity instanceof \taqdees\Skyblock\entities\OzzyNPC) {
+                    $entityPos = $entity->getPosition();
+                    if ((int)floor($entityPos->getX()) === $x &&
+                        (int)floor($entityPos->getZ()) === $z &&
+                        ($y === (int)floor($entityPos->getY()) || $y === (int)floor($entityPos->getY()) - 1)) {
+                        $event->cancel();
+                        return;
+                    }
+                }
+            }
+
+            if (!$this->plugin->isInEditMode($player->getName()) &&
                 !$this->plugin->getIslandManager()->isOnIsland($player, $block->getPosition())) {
-                
                 $skyblockWorld = $this->plugin->getDataManager()->getSkyblockWorld();
-                if ($skyblockWorld !== null && 
+                if ($skyblockWorld !== null &&
                     $block->getPosition()->getWorld()->getFolderName() === $skyblockWorld) {
-                    
                     $event->cancel();
                     $player->sendMessage("§cYou can only build on your own island!");
                     return;
@@ -143,14 +152,27 @@ class EventListener implements Listener {
 
     public function onBlockBreak(BlockBreakEvent $event): void {
         $player = $event->getPlayer();
-        
-        if (!$this->plugin->isInEditMode($player->getName()) && 
-            !$this->plugin->getIslandManager()->isOnIsland($player, $event->getBlock()->getPosition())) {
-            
+        $block = $event->getBlock();
+        $blockPos = $block->getPosition();
+
+        foreach ($player->getWorld()->getEntities() as $entity) {
+            if ($entity instanceof \taqdees\Skyblock\entities\BaseMinion || $entity instanceof \taqdees\Skyblock\entities\OzzyNPC) {
+                $entityPos = $entity->getPosition();
+                if ((int)floor($entityPos->getX()) === (int)floor($blockPos->getX()) &&
+                    (int)floor($entityPos->getZ()) === (int)floor($blockPos->getZ()) &&
+                    (int)floor($blockPos->getY()) === (int)floor($entityPos->getY()) - 1) {
+                    $event->cancel();
+                    $player->sendMessage("§cYou cannot break the block a minion is standing on!");
+                    return;
+                }
+            }
+        }
+
+        if (!$this->plugin->isInEditMode($player->getName()) &&
+            !$this->plugin->getIslandManager()->isOnIsland($player, $blockPos)) {
             $skyblockWorld = $this->plugin->getDataManager()->getSkyblockWorld();
-            if ($skyblockWorld !== null && 
-                $event->getBlock()->getPosition()->getWorld()->getFolderName() === $skyblockWorld) {
-                
+            if ($skyblockWorld !== null &&
+                $blockPos->getWorld()->getFolderName() === $skyblockWorld) {
                 $event->cancel();
                 $player->sendMessage("§cYou can only break blocks on your own island!");
             }
