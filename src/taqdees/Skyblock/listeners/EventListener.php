@@ -42,24 +42,20 @@ class EventListener implements Listener {
         
         if ($item->getTypeId() === VanillaItems::VILLAGER_SPAWN_EGG()->getTypeId()) {
             $customName = $item->getCustomName();
-
-            // THIS FUNCTION WILL BE REMOVED!
-            //------------
-            if ($customName === "§6Ozzy's Egg" && $this->plugin->isInEditMode($player->getName())) {
+            if ($customName === "§bLocation Egg" && $this->plugin->getNPCManager()->isInPlacingMode($player->getName())) {
                 $event->cancel();
                 $spawnPosition = $this->getValidSpawnPosition($block);
                 if ($spawnPosition === null) {
-                    $player->sendMessage("§cCannot place NPC here! Make sure there's enough space above the block.");
+                    $player->sendMessage("§cCannot place location marker here! Make sure there's enough space above the block.");
                     return;
                 }
                 
-                if ($this->plugin->getNPCManager()->spawnNPC($player, $spawnPosition)) {
+                if ($this->plugin->getNPCManager()->handleLocationEggUse($player, $spawnPosition)) {
                     $item->setCount($item->getCount() - 1);
                     $player->getInventory()->setItemInHand($item);
                 }
                 return;
             }
-            //------------
 
             $minionType = $item->getNamedTag()->getString("minionType", "");
             
@@ -77,6 +73,7 @@ class EventListener implements Listener {
                 }
                 return;
             }
+
             $nbt = $item->getNamedTag();
             
             if ($nbt->getString("minion_egg", "") === "true") {
@@ -88,20 +85,6 @@ class EventListener implements Listener {
                     return;
                 }
                 if ($this->plugin->getMinionManager()->spawnMinionFromEgg($player, $spawnPosition, $item)) {
-                    $item->setCount($item->getCount() - 1);
-                    $player->getInventory()->setItemInHand($item);
-                }
-                return;
-            }
-            if ($customName === "§bLocation Egg" && $this->plugin->getNPCManager()->isInPlacingMode($player->getName())) {
-                $event->cancel();
-                $spawnPosition = $this->getValidSpawnPosition($block);
-                if ($spawnPosition === null) {
-                    $player->sendMessage("§cCannot place location marker here! Make sure there's enough space above the block.");
-                    return;
-                }
-                
-                if ($this->plugin->getNPCManager()->handleLocationEggUse($player, $spawnPosition)) {
                     $item->setCount($item->getCount() - 1);
                     $player->getInventory()->setItemInHand($item);
                 }

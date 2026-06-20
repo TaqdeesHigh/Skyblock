@@ -83,6 +83,45 @@ class NPCSpawnManager {
         $player->sendMessage("§7Right-click where you want to place " . $npc->getDisplayName() . ".");
     }
 
+    public function handleLocationEggUse(Player $player, Position $position): bool {
+        $playerName = $player->getName();
+        
+        if (!isset($this->placingMode[$playerName])) {
+            return false;
+        }
+
+        if (!isset($this->npcs[$playerName])) {
+            $player->sendMessage("§cYou don't have an NPC to move!");
+            unset($this->placingMode[$playerName]);
+            return false;
+        }
+        $oldNpc = $this->npcs[$playerName];
+        $oldNpc->flagForDespawn();
+        unset($this->npcs[$playerName]);
+        $location = new \pocketmine\entity\Location(
+            $position->getX(),
+            $position->getY(),
+            $position->getZ(),
+            $position->getWorld(),
+            0,
+            0
+        );
+
+        $displayName = $this->dataManager->getNPCData($playerName)["name"] ?? "Ozzy";
+
+        $npc = new OzzyNPC($this->plugin, $location);
+        $npc->setDisplayName($displayName);
+        $npc->spawnToAll();
+
+        $this->npcs[$playerName] = $npc;
+        $this->dataManager->updateNPCLocation($playerName, $position);
+
+        unset($this->placingMode[$playerName]);
+
+        $player->sendMessage("§a" . $displayName . " has been moved to the new location!");
+        return true;
+    }
+
     public function createLocationEgg(): \pocketmine\item\Item {
         $egg = VanillaItems::VILLAGER_SPAWN_EGG();
         $egg->setCustomName("§bLocation Egg");
@@ -90,27 +129,6 @@ class NPCSpawnManager {
             "§7Right-click to set new NPC location"
         ]);
         return $egg;
-    }
-
-    public function handleLocationEggUse(Player $player, Position $position): bool {
-        if (!isset($this->placingMode[$player->getName()])) {
-            return false;
-        }
-
-        if (!isset($this->npcs[$player->getName()])) {
-            $player->sendMessage("§cYou don't have an NPC to move!");
-            unset($this->placingMode[$player->getName()]);
-            return false;
-        }
-
-        $npc = $this->npcs[$player->getName()];
-        $npc->teleport($position);
-        
-        $this->dataManager->updateNPCLocation($player->getName(), $position);
-        unset($this->placingMode[$player->getName()]);
-        
-        $player->sendMessage("§a" . $npc->getDisplayName() . " has been moved to the new location!");
-        return true;
     }
 
     public function isInPlacingMode(string $playerName): bool {
