@@ -12,6 +12,7 @@ use pocketmine\event\block\BlockPlaceEvent;
 use pocketmine\event\block\BlockBreakEvent;
 use pocketmine\event\entity\EntitySpawnEvent;
 use pocketmine\event\player\PlayerItemUseEvent;
+use pocketmine\event\player\PlayerJoinEvent;
 use pocketmine\block\VanillaBlocks;
 use pocketmine\player\Player;
 use pocketmine\item\VanillaItems;
@@ -179,8 +180,72 @@ class EventListener implements Listener {
         $this->plugin->setEditMode($playerName, false);
     }
     
-    public function onPlayerLogin(PlayerLoginEvent $event): void {
-        $playerName = $event->getPlayer()->getName();
-        $this->plugin->getNPCManager()->cleanupPlayer($playerName);
+    public function onPlayerJoin(PlayerJoinEvent $event): void {
+        $player = $event->getPlayer();
+        $playerName = $player->getName();
+
+        $allIslands = $this->plugin->getDataManager()->getAllIslands();
+        $ownerName = null;
+        if (isset($allIslands[strtolower($playerName)])) {
+            $ownerName = strtolower($playerName);
+        } else {
+            foreach ($allIslands as $owner => $data) {
+                if (in_array($playerName, $data["members"] ?? [])) {
+                    $ownerName = $owner;
+                    break;
+                }
+            }
+        }
+
+        if ($ownerName === null) {
+            return;
+        }
+        $this->plugin->getScheduler()->scheduleDelayedTask(
+            new \pocketmine\scheduler\ClosureTask(function () use ($player, $ownerName): void {
+                if (!$player->isOnline()) return;
+
+                $islandWorldName = "island_" . strtolower($ownerName);
+                $server = \pocketmine\Server::getInstance();
+                $worldManager = $server->getWorldManager();
+
+                if (!$worldManager->isWorldLoaded($islandWorldName)) {
+                    if (!$worldManager->loadWorld($islandWorldName)) {
+                        $player->sendMessage("§cFailed to load your island world. Please contact an admin.");
+                        return;
+                    }
+                }
+
+                $world = $worldManager->getWorldByName($islandWorldName);
+                if ($world === null) {
+                    $player->sendMessage("§cYour island world could not be found.");
+                    return;
+                }
+                $allIslands = $this->plugin->getDataManager()->getAllIslands();
+                $islandData = $allIslands[$ownerName] ?? null;
+
+                if ($islandData !== null && isset($islandData["home"])) {
+                    $home = $islandData["home"];
+                    $pos = new \pocketmine\world\Position(
+                        $home["x"],
+                        $home["y"],
+                        $home["z"],
+                        $world
+                    );
+                } else {
+                    $spawnPos = $world->getSpawnLocation();
+                    $pos = new \pocketmine\world\Position(
+                        $spawnPos->getX(),
+                        $spawnPos->getY(),
+                        $spawnPos->getZ(),
+                        $world
+                    );
+                }
+
+                $player->teleport($pos);
+                $player->sendMessage("§aWelcome back to your island!");
+            }),
+            1
+        );
     }
+
 }
