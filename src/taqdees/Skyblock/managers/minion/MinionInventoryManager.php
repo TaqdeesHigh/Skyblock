@@ -325,47 +325,28 @@ class MinionInventoryManager {
         $collected = $minion->collectItemsFromInventory($player);
         if ($collected > 0) {
             $player->sendMessage("§aCollected " . $collected . " item stacks from minion!");
-            $this->updateStorageDisplay($player, $minion);
-            $this->updateCollectButton($player, $minion);
+            $this->refreshOpenMenu($player, $minion);
         } else {
             $player->sendMessage("§cNo items to collect or your inventory is full!");
         }
     }
 
-    private function updateStorageDisplay(Player $player, BaseMinion $minion): void {
-        if (!isset($this->openMenus[$player->getName()])) return;
-
-        $menu        = $this->openMenus[$player->getName()];
-        $inventory   = $menu->getInventory();
-        $storageSlots = [21, 22, 23, 24, 25, 30, 31, 32, 33, 34, 39, 40, 41, 42, 43];
-        $unlockedSlots = min($minion->getMaxInventorySlots(), count($storageSlots));
-        $minionInventory = $minion->getMinionInventory();
-
-        for ($i = 0; $i < $unlockedSlots; $i++) {
-            $inventory->clear($storageSlots[$i]);
-        }
-        for ($i = 0; $i < count($minionInventory) && $i < $unlockedSlots; $i++) {
-            if (!$minionInventory[$i]->isNull()) {
-                $inventory->setItem($storageSlots[$i], $minionInventory[$i]);
-            }
-        }
-    }
-
-    private function updateCollectButton(Player $player, BaseMinion $minion): void {
+    private function refreshOpenMenu(Player $player, BaseMinion $minion): void {
         if (!isset($this->openMenus[$player->getName()])) return;
 
         $menu      = $this->openMenus[$player->getName()];
         $inventory = $menu->getInventory();
-
-        $collectButton = VanillaBlocks::CHEST()->asItem();
-        $collectButton->setCustomName("§aCollect All");
-        $collectButton->setLore([
-            "§7Click to collect all items",
-            "§7from this minion's storage!",
-            "",
-            "§7Items in storage: §e" . $this->countStorageItems($minion),
-        ]);
-        $inventory->setItem(48, $collectButton);
+        $this->setupMenuLayout($inventory, $minion);
+        $currentTitle = "§cNULL" ;
+        $newTitle     = $minion->getDisplayName();
+        $player->removeCurrentWindow();
+        $this->plugin->getScheduler()->scheduleDelayedTask(
+            new \pocketmine\scheduler\ClosureTask(function () use ($player, $minion): void {
+                if ($player->isOnline() && !$minion->isFlaggedForDespawn()) {
+                    $this->openMinionInventoryMenu($player, $minion);
+                }
+            }), 2
+        );
     }
 
     private function pickupMinion(Player $player, BaseMinion $minion): void {

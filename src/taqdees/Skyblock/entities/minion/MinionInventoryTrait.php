@@ -40,6 +40,12 @@ trait MinionInventoryTrait {
         return count($this->minionInventory);
     }
 
+    private function refreshNameTag(): void {
+        $name = $this->getDisplayName();
+        $this->setNameTag($name);
+        $this->sendData($this->getViewers());
+    }
+
     public function isInventoryFull(): bool {
         return !$this->hasInventorySpace();
     }
@@ -47,23 +53,24 @@ trait MinionInventoryTrait {
     public function syncInventoryFromArray(array $newInventory): void {
         $this->minionInventory = $newInventory;
         $this->markInventoryChanged();
+        $this->refreshNameTag();
     }
+
 
     public function addItemToInventory(Item $item): bool {
         if ($item->isNull() || $item->getCount() <= 0) {
             return false;
         }
-
         $slotsAvailable = $this->getMaxInventorySlots();
         foreach ($this->minionInventory as $key => $inventoryItem) {
             if ($inventoryItem->equals($item, true, false)) {
                 $maxStack = $inventoryItem->getMaxStackSize();
                 $currentCount = $inventoryItem->getCount();
                 $itemCount = $item->getCount();
-                
                 if ($currentCount + $itemCount <= $maxStack) {
                     $inventoryItem->setCount($currentCount + $itemCount);
                     $this->markInventoryChanged();
+                    $this->refreshNameTag();
                     return true;
                 } else {
                     $canAdd = $maxStack - $currentCount;
@@ -71,6 +78,7 @@ trait MinionInventoryTrait {
                         $inventoryItem->setCount($maxStack);
                         $item->setCount($itemCount - $canAdd);
                         $this->markInventoryChanged();
+                        $this->refreshNameTag();
                     }
                 }
             }
@@ -78,9 +86,9 @@ trait MinionInventoryTrait {
         if (count($this->minionInventory) < $slotsAvailable && $item->getCount() > 0) {
             $this->minionInventory[] = clone $item;
             $this->markInventoryChanged();
+            $this->refreshNameTag();
             return true;
         }
-        
         return false;
     }
 
@@ -105,8 +113,8 @@ trait MinionInventoryTrait {
         
         if ($collected > 0) {
             $this->markInventoryChanged();
+            $this->refreshNameTag();
         }
-        
         return $collected;
     }
 

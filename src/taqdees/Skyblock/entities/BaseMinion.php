@@ -61,12 +61,12 @@ abstract class BaseMinion extends Human {
     }
 
     public function getDisplayName(): string {
-        $filled = count($this->minionInventory);
-        $max = $this->getMaxInventorySlots();
-        $inventoryStatus = $filled >= $max ? "§cFull" : $filled . "/" . $max;
-        return ucfirst($this->minionType) . " Minion §8[" . $inventoryStatus . "§8]";
+        $filled = $this->getInventoryItemCount();
+        $max    = $this->getMaxInventorySlots();
+        $status = $filled >= $max ? "§cFull" : "§a" . $filled . "§7/§a" . $max;
+        return "§e" . ucfirst($this->minionType) . " Minion §8[" . $status . "§8]";
     }
-    
+
     public function getProfession(): ?Profession { return $this->profession; }
     public function getMinionType(): string { return $this->minionType; }
     public function getLevel(): int { return $this->level; }
