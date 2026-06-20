@@ -135,6 +135,8 @@ trait MinionWorkTrait {
     protected function findWork(): void {
         if ($this->isInventoryFull()) return;
 
+        $this->fillMissingPlatformBlocks();
+
         $world = $this->getWorld();
         $pos = $this->getPosition();
         $workPositions = [];
@@ -151,8 +153,6 @@ trait MinionWorkTrait {
         }
 
         if (!empty($workPositions)) {
-            $this->fillMissingPlatformBlocks();
-
             $randomIndex = array_rand($workPositions);
             $this->targetBlock = $workPositions[$randomIndex];
             $this->breakingTick = 0;
